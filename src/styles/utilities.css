@@ -1,0 +1,14 @@
+.container-page {
+  width: min(100% - 2rem, 1200px);
+  margin-inline: auto;
+}
+
+.text-muted {
+  color: var(--color-text-secondary);
+}
+
+.surface-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 1rem;
+}
