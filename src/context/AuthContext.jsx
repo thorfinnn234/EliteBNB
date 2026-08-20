@@ -1,7 +1,10 @@
-import { createContext, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { AuthContext } from "./AuthContextBase";
 
-export const AuthContext = createContext(null);
-
+/**
+ * Provides the current authenticated user and token helpers to the app.
+ * It is intended to wrap the routed application once routing is wired in.
+ */
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
