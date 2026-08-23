@@ -8,8 +8,11 @@ export function useFetch(fetcher, deps = []) {
   useEffect(() => {
     let active = true;
 
-    setLoading(true);
-    Promise.resolve(fetcher())
+    Promise.resolve()
+      .then(() => {
+        if (active) setLoading(true);
+        return fetcher();
+      })
       .then((result) => {
         if (active) setData(result?.data ?? result);
       })
@@ -23,7 +26,7 @@ export function useFetch(fetcher, deps = []) {
     return () => {
       active = false;
     };
-  }, deps);
+  }, [fetcher, ...deps]);
 
   return { data, loading, error };
 }
