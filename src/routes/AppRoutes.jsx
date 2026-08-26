@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import HostLayout from "../layouts/HostLayout";
@@ -8,10 +9,16 @@ import Calendar from "../pages/host/Calendar";
 import Reservations from "../pages/host/Reservations";
 import Earnings from "../pages/host/Earnings";
 import HostProfile from "../pages/host/HostProfile";
+=======
+import { Routes, Route } from "react-router-dom";
+import Home from "../pages/public/Home";
+import Login from "../pages/auth/Login";
+>>>>>>> origin/main
 
 export default function AppRoutes() {
   return (
     <Routes>
+<<<<<<< HEAD
       <Route
         path="/"
         element={<Navigate to="/host/dashboard" replace />}
@@ -72,6 +79,10 @@ export default function AppRoutes() {
           }
         />
       </Route>
+=======
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+>>>>>>> origin/main
     </Routes>
   );
 }
