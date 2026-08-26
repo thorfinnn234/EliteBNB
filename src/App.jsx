@@ -1,3 +1,10 @@
+<<<<<<< HEAD
+import AppRoutes from "./routes/AppRoutes";
+
+function App() {
+  return <AppRoutes />;
+}
+=======
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/public/Home";
 import Login from "./pages/auth/Login";
@@ -22,5 +29,6 @@ const App = () => {
     </BrowserRouter>
   );
 };
+>>>>>>> origin/main
 
 export default App;
