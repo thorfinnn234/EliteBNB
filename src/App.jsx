@@ -1,7 +1,7 @@
-import Test from "./test.jsx";
+import AppRoutes from "./routes/AppRoutes";
 
-const App = () => {
-  return <Test />;
-};
+function App() {
+  return <AppRoutes />;
+}
 
 export default App;
