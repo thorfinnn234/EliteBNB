@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../services/authService";
 
 import AuthLayout from "../../components/auth/AuthLayout";
@@ -16,6 +16,7 @@ export default function Login() {
   });
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,12 +42,15 @@ export default function Login() {
       });
 
       const data = response.data;
+      const { token, user: responseUser, ...topLevelUserFields } = data;
+      const authenticatedUser = responseUser ?? topLevelUserFields;
+      const role = authenticatedUser.role ?? data.role;
 
-      localStorage.setItem("token", data.token);
+      login({ token, user: authenticatedUser });
 
-      if (data.role === "ADMIN") {
+      if (role === "ADMIN") {
         navigate("/admin/dashboard");
-      } else if (data.role === "HOST") {
+      } else if (role === "HOST") {
         navigate("/host/dashboard");
       } else {
         navigate("/user/dashboard");
