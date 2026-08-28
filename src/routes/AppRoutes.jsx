@@ -11,6 +11,12 @@ import AdminReports from "../pages/admin/Reports";
 import AdminReviews from "../pages/admin/Reviews";
 import AdminTransactions from "../pages/admin/Transactions";
 import AdminUsers from "../pages/admin/Users";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import ResetPassword from "../pages/auth/ResetPassword";
+import VerifyEmail from "../pages/auth/VerifyEmail";
+import VerifyResetCode from "../pages/auth/VerifyResetCode";
 import HostCalendar from "../pages/host/Calendar";
 import CreateListing from "../pages/host/CreateListing";
 import HostEarnings from "../pages/host/Earnings";
@@ -20,9 +26,7 @@ import HostListings from "../pages/host/HostListings";
 import HostProfile from "../pages/host/HostProfile";
 import HostReservations from "../pages/host/Reservations";
 import Home from "../pages/public/Home";
-import Login from "../pages/public/Login";
 import PropertyDetails from "../pages/public/PropertyDetails";
-import Register from "../pages/public/Register";
 import Search from "../pages/public/Search";
 import BookingCheckout from "../pages/user/BookingCheckout";
 import UserReviews from "../pages/user/Reviews";
@@ -33,16 +37,16 @@ import Wishlist from "../pages/user/Wishlist";
 import RoleRoute from "./RoleRoute";
 
 /**
- * Wraps a placeholder page in the shared public layout.
- * Public routes stay open while retaining the current shared shell.
+ * Wraps public placeholder pages in the shared public layout.
+ * Auth pages use their own AuthLayout and are routed separately.
  */
 function PublicPage({ children }) {
   return <PublicLayout>{children}</PublicLayout>;
 }
 
 /**
- * Wraps USER placeholders with the existing role guard and dashboard layout.
- * The guard is a frontend navigation aid; backend authorization is still required.
+ * Wraps USER pages with the existing frontend role guard and layout.
+ * Backend authorization remains the source of truth for protected data.
  */
 function UserPage({ children }) {
   return (
@@ -53,8 +57,8 @@ function UserPage({ children }) {
 }
 
 /**
- * Wraps HOST placeholders with the existing role guard and dashboard layout.
- * This activates routes only; it does not implement Host feature UI.
+ * Wraps HOST pages with the existing frontend role guard and layout.
+ * The Host page implementations from main are preserved inside this shell.
  */
 function HostPage({ children }) {
   return (
@@ -65,8 +69,8 @@ function HostPage({ children }) {
 }
 
 /**
- * Wraps ADMIN placeholders with the existing role guard and dashboard layout.
- * Admin pages remain starter placeholders until the admin UI phase begins.
+ * Wraps ADMIN placeholders with the existing frontend role guard and layout.
+ * Admin pages remain placeholders until the Admin development phase begins.
  */
 function AdminPage({ children }) {
   return (
@@ -77,22 +81,27 @@ function AdminPage({ children }) {
 }
 
 /**
- * Minimal unknown-route fallback that keeps bad URLs from rendering a blank page.
+ * Keeps unknown URLs from rendering a blank page without designing a final 404.
  */
 function NotFound() {
   return (
     <section className="min-h-screen bg-[#FAF9F6] p-8">
       <div className="mx-auto max-w-3xl rounded-2xl border border-[#E5E7EB] bg-white p-6">
-        <h1 className="text-2xl font-extrabold text-[#172554]">Page not found</h1>
-        <p className="mt-3 text-[#64748B]">The requested route does not exist.</p>
+        <h1 className="text-2xl font-extrabold text-[#172554]">
+          Page not found
+        </h1>
+        <p className="mt-3 text-[#64748B]">
+          The requested route does not exist.
+        </p>
       </div>
     </section>
   );
 }
 
 /**
- * Defines the active EliteBNB route map using the existing placeholder pages.
- * Role-specific routes are grouped under /user, /host, and /admin.
+ * Defines the merged EliteBNB route map.
+ * It keeps the full public, auth, USER, HOST, and ADMIN structure while using
+ * the newer auth pages and Host pages that arrived from origin/main.
  */
 export default function AppRoutes() {
   return (
@@ -100,8 +109,13 @@ export default function AppRoutes() {
       <Route path="/" element={<PublicPage><Home /></PublicPage>} />
       <Route path="/search" element={<PublicPage><Search /></PublicPage>} />
       <Route path="/property/:id" element={<PublicPage><PropertyDetails /></PublicPage>} />
-      <Route path="/login" element={<PublicPage><Login /></PublicPage>} />
-      <Route path="/register" element={<PublicPage><Register /></PublicPage>} />
+
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/verify-reset-code" element={<VerifyResetCode />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
       <Route path="/user/dashboard" element={<UserPage><UserHome /></UserPage>} />
