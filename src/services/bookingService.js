@@ -1,7 +1,15 @@
 import api from "./api";
 
 export const bookingService = {
+  // USER
   create: (payload) => api.post("/bookings", payload),
-  getMine: () => api.get("/bookings/me"),
-  getById: (id) => api.get(`/bookings/${id}`),
+  getMine: () => api.get("/bookings/my"),
+
+  // HOST
+  getHostReservations: () => api.get("/bookings/host"),
+
+  updateStatus: (bookingId, status) =>
+    api.patch(`/bookings/${bookingId}/status`, null, {
+      params: { status },
+    }),
 };

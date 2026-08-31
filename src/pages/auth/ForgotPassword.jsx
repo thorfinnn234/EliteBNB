@@ -1,13 +1,42 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AuthLayout from "../../components/auth/AuthLayout";
+import { authService } from "../../services/authService";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(email);
+    setError("");
+    setSuccess(false);
+
+    if (!email.trim()) {
+      setError("Email is required");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await authService.forgotPassword({ email });
+      setSuccess(true);
+      
+      // Redirect to verify reset code page after 2 seconds
+      setTimeout(() => {
+        navigate(`/verify-reset-code?email=${encodeURIComponent(email)}`);
+      }, 2000);
+    } catch (err) {
+      const message =
+        err.response?.data?.message || err.response?.data || "Failed to send reset code";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -28,6 +57,18 @@ export default function ForgotPassword() {
         </p>
       </div>
 
+      {error && (
+        <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mt-4 rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-700">
+          Reset code sent successfully! Redirecting...
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-8">
         <input
           type="email"
@@ -39,9 +80,10 @@ export default function ForgotPassword() {
 
         <button
           type="submit"
-          className="mt-5 h-12 w-full rounded-xl bg-[#172554] font-semibold text-white"
+          disabled={loading}
+          className="mt-5 h-12 w-full rounded-xl bg-[#172554] font-semibold text-white disabled:opacity-50"
         >
-          Send reset code
+          {loading ? "Sending..." : "Send reset code"}
         </button>
       </form>
 

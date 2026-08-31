@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/authService";
+import { useAuth } from "../../hooks/useAuth";
 
 import AuthLayout from "../../components/auth/AuthLayout";
 
@@ -16,6 +17,7 @@ export default function Login() {
   });
 
   const navigate = useNavigate();
+  const auth = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -41,20 +43,34 @@ export default function Login() {
       });
 
       const data = response.data;
+      const role = data.user?.role || data.role;
+      const user = data.user || {
+        ...data,
+        role,
+      };
 
-      localStorage.setItem("token", data.token);
+      auth?.login({
+        user,
+        token: data.token,
+      });
 
-      if (data.role === "ADMIN") {
+      if (role === "ADMIN") {
         navigate("/admin/dashboard");
-      } else if (data.role === "HOST") {
+      } else if (role === "HOST") {
         navigate("/host/dashboard");
       } else {
         navigate("/user/home");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || err.response?.data || "Login failed",
-      );
+      const message =
+        err.response?.data?.message || err.response?.data || "Login failed";
+
+      if (String(message).toLowerCase().includes("verify your email")) {
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+        return;
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }
