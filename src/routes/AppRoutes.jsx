@@ -34,6 +34,7 @@ import Trips from "../pages/user/Trips";
 import UserHome from "../pages/user/UserHome";
 import UserProfile from "../pages/user/UserProfile";
 import Wishlist from "../pages/user/Wishlist";
+import { userHomePreviewIdentity } from "../data/userHomeData";
 import RoleRoute from "./RoleRoute";
 
 /**
@@ -81,6 +82,26 @@ function AdminPage({ children }) {
 }
 
 /**
+ * Renders the USER shell and dashboard with presentation-only identity data.
+ * This is strictly for frontend development when the backend is unavailable;
+ * it does not touch AuthContext, localStorage, tokens, or protected routes.
+ */
+function DevUserPreviewPage({
+  children,
+  routePath = "/user/dashboard",
+}) {
+  return (
+    <UserLayout
+      previewMode
+      previewRoutePath={routePath}
+      previewUser={userHomePreviewIdentity}
+    >
+      {children}
+    </UserLayout>
+  );
+}
+
+/**
  * Keeps unknown URLs from rendering a blank page without designing a final 404.
  */
 function NotFound() {
@@ -116,6 +137,65 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-reset-code" element={<VerifyResetCode />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {import.meta.env.DEV ? (
+        <>
+          <Route
+            path="/dev/user-preview"
+            element={
+              <DevUserPreviewPage routePath="/user/dashboard">
+                <UserHome
+                  previewMode
+                  previewUser={userHomePreviewIdentity}
+                />
+              </DevUserPreviewPage>
+            }
+          />
+          <Route
+            path="/dev/user-preview/explore"
+            element={
+              <DevUserPreviewPage routePath="/search">
+                <Search previewMode />
+              </DevUserPreviewPage>
+            }
+          />
+          <Route
+            path="/dev/user-preview/trips"
+            element={
+              <DevUserPreviewPage routePath="/user/trips">
+                <Trips previewMode />
+              </DevUserPreviewPage>
+            }
+          />
+          <Route
+            path="/dev/user-preview/saved"
+            element={
+              <DevUserPreviewPage routePath="/user/wishlist">
+                <Wishlist previewMode />
+              </DevUserPreviewPage>
+            }
+          />
+          <Route
+            path="/dev/user-preview/reviews"
+            element={
+              <DevUserPreviewPage routePath="/user/reviews">
+                <UserReviews />
+              </DevUserPreviewPage>
+            }
+          />
+          <Route
+            path="/dev/user-preview/profile"
+            element={
+              <DevUserPreviewPage routePath="/user/profile">
+                <UserProfile
+                  previewMode
+                  previewUser={userHomePreviewIdentity}
+                />
+              </DevUserPreviewPage>
+            }
+          />
+        </>
+      ) : null}
 
       <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
       <Route path="/user/dashboard" element={<UserPage><UserHome /></UserPage>} />

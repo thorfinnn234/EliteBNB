@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
@@ -9,9 +9,14 @@
 }
 
 @layer base {
+  :root {
+    --elite-font-display: "Cormorant Garamond", Georgia, serif;
+    --elite-font-ui: "Manrope", system-ui, sans-serif;
+  }
+
   body {
     @apply font-body bg-canvas text-ink;
-    letter-spacing: 0.01em;
+    letter-spacing: 0;
   }
 
   h1,

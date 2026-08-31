@@ -1,9 +1,15 @@
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import registerVisualImage from "../../assets/home/story-coastal-dusk.jpg";
 import AuthLayout from "../../components/auth/AuthLayout";
+import GoogleIcon from "../../components/auth/GoogleIcon";
 import { authService } from "../../services/authService";
 
+/**
+ * Renders the account creation form while preserving the existing registration
+ * payload and verify-email redirect contract.
+ */
 export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -20,17 +26,25 @@ export default function Register() {
     role: "USER",
   });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  /**
+   * Updates account-creation fields by name so the payload shape remains
+   * compatible with authService.register.
+   */
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       [name]: value,
     }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  /**
+   * Uses the existing auth service and preserves the current post-register
+   * verify-email navigation behavior.
+   */
+  const handleSubmit = async (event) => {
+    event.preventDefault();
 
     setLoading(true);
     setError("");
@@ -51,118 +65,156 @@ export default function Register() {
   };
 
   return (
-    <AuthLayout>
-      <Link to="/" className="inline-flex items-center">
-        <h1 className="font-[Manrope] text-2xl font-extrabold text-[#172554]">
-          Elite<span className="text-[#D4A72C]">BNB</span>
-        </h1>
-      </Link>
-
-      <div className="mt-8">
-        <h2 className="font-[Manrope] text-3xl font-bold text-[#111827]">
-          Create your account
-        </h2>
-
-        <p className="mt-2 text-sm text-[#64748B]">
-          Join EliteBNB and discover exceptional stays.
-        </p>
-      </div>
-
-      <button
-        type="button"
-        className="mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-[#E5E7EB] bg-white text-sm font-medium text-[#111827] hover:bg-[#FAF9F6]"
-      >
-        Continue with Google
-      </button>
-
-      <div className="my-6 flex items-center gap-4">
-        <div className="h-px flex-1 bg-[#E5E7EB]" />
-        <span className="text-xs text-[#94A3B8]">OR</span>
-        <div className="h-px flex-1 bg-[#E5E7EB]" />
-      </div>
-
-      {error && <p className="mb-4 text-sm text-[#DC2626]">{error}</p>}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <input
-            name="firstName"
-            placeholder="First name"
-            value={formData.firstName}
-            onChange={handleChange}
-            className="h-12 rounded-xl border border-[#E5E7EB] px-4 outline-none focus:border-[#172554]"
-          />
-
-          <input
-            name="lastName"
-            placeholder="Last name"
-            value={formData.lastName}
-            onChange={handleChange}
-            className="h-12 rounded-xl border border-[#E5E7EB] px-4 outline-none focus:border-[#172554]"
-          />
+    <AuthLayout
+      variant="register"
+      showBrand
+      eyebrow="BEGIN WITH THE PLACE"
+      visualTitle="Start somewhere extraordinary."
+      visualCopy="Create your account for saved stays, smoother bookings and homes selected for atmosphere as much as address."
+      visualDetails={["Guest access", "Host ready", "Curated search"]}
+      visualImage={registerVisualImage}
+      visualAlt="Infinity pool overlooking the coastline at dusk"
+    >
+      <div className="elite-auth-form">
+        <div className="elite-auth-form__intro">
+          <p className="elite-auth-form__eyebrow">JOIN ELITEBNB</p>
+          <h1>Start somewhere extraordinary.</h1>
+          <p>
+            Create your account to save remarkable residences and continue
+            booking with confidence.
+          </p>
         </div>
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email address"
-          value={formData.email}
-          onChange={handleChange}
-          className="h-12 w-full rounded-xl border border-[#E5E7EB] px-4 outline-none focus:border-[#172554]"
-        />
-
-        <input
-          name="phoneNumber"
-          placeholder="Phone number"
-          value={formData.phoneNumber}
-          onChange={handleChange}
-          className="h-12 w-full rounded-xl border border-[#E5E7EB] px-4 outline-none focus:border-[#172554]"
-        />
-
-        <select
-          name="role"
-          value={formData.role}
-          onChange={handleChange}
-          className="h-12 w-full rounded-xl border border-[#E5E7EB] bg-white px-4 outline-none"
-        >
-          <option value="USER">User</option>
-          <option value="HOST">Host</option>
-        </select>
-
-        <div className="relative">
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            className="h-12 w-full rounded-xl border border-[#E5E7EB] px-4 pr-12 outline-none focus:border-[#172554]"
-          />
-
+        <div className="elite-auth-form__access-options">
           <button
             type="button"
-            onClick={() => setShowPassword((prev) => !prev)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#94A3B8]"
+            className="elite-auth-form__google"
           >
-            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            <GoogleIcon />
+            Continue with Google
           </button>
+
+          <div className="elite-auth-form__divider">
+            <span>OR</span>
+          </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="h-12 w-full rounded-xl bg-[#172554] font-semibold text-white disabled:opacity-60"
-        >
-          {loading ? "Creating account..." : "Create account"}
-        </button>
-      </form>
+        {error ? (
+          <p className="elite-auth-form__error" role="alert">
+            {error}
+          </p>
+        ) : null}
 
-      <p className="mt-5 text-center text-sm text-[#64748B]">
-        Already have an account?{" "}
-        <Link to="/login" className="font-semibold text-[#D4A72C]">
-          Sign in
-        </Link>
-      </p>
+        <form onSubmit={handleSubmit} className="elite-auth-form__fields">
+          <div className="elite-auth-form__split">
+            <div className="elite-auth-form__field">
+              <label htmlFor="firstName">First name</label>
+              <input
+                id="firstName"
+                name="firstName"
+                placeholder="Ada"
+                value={formData.firstName}
+                onChange={handleChange}
+                className="elite-auth-form__input"
+              />
+            </div>
+
+            <div className="elite-auth-form__field">
+              <label htmlFor="lastName">Last name</label>
+              <input
+                id="lastName"
+                name="lastName"
+                placeholder="Okafor"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="elite-auth-form__input"
+              />
+            </div>
+          </div>
+
+          <div className="elite-auth-form__field">
+            <label htmlFor="register-email">Email address</label>
+            <input
+              id="register-email"
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              value={formData.email}
+              onChange={handleChange}
+              className="elite-auth-form__input"
+            />
+          </div>
+
+          <div className="elite-auth-form__field">
+            <label htmlFor="phoneNumber">Phone number</label>
+            <input
+              id="phoneNumber"
+              name="phoneNumber"
+              placeholder="+234 800 000 0000"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              className="elite-auth-form__input"
+            />
+          </div>
+
+          <div className="elite-auth-form__field">
+            <label htmlFor="role">Account type</label>
+            <div className="elite-auth-form__select-shell">
+              <select
+                id="role"
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="elite-auth-form__select"
+              >
+                <option value="USER">User</option>
+                <option value="HOST">Host</option>
+              </select>
+              <ChevronDown
+                className="elite-auth-form__select-icon"
+                size={17}
+                aria-hidden="true"
+              />
+            </div>
+          </div>
+
+          <div className="elite-auth-form__field">
+            <label htmlFor="register-password">Password</label>
+            <div className="elite-auth-form__password">
+              <input
+                id="register-password"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                className="elite-auth-form__input"
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="elite-auth-form__reveal"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="elite-auth-form__submit"
+          >
+            {loading ? "Creating account..." : "Create account"}
+          </button>
+        </form>
+
+        <p className="elite-auth-form__switch">
+          Already have an account? <Link to="/login">Sign in</Link>
+        </p>
+      </div>
     </AuthLayout>
   );
 }

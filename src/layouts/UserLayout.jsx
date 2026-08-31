@@ -1,12 +1,23 @@
-import Sidebar from "../components/layout/Sidebar";
+import UserShell from "../components/user/UserShell";
 
-export default function UserLayout({ children }) {
+/**
+ * Applies the dedicated authenticated guest shell to every USER route.
+ * RoleRoute still owns authorization; this layout only supplies the customer
+ * navigation frame and responsive content canvas.
+ */
+export default function UserLayout({
+  children,
+  previewMode = false,
+  previewUser,
+  previewRoutePath,
+}) {
   return (
-    <div className="flex min-h-screen bg-[#FAF9F6]">
-      <div className="hidden lg:block">
-        <Sidebar role="USER" activeKey="home" />
-      </div>
-      <main className="min-w-0 flex-1">{children}</main>
-    </div>
+    <UserShell
+      previewMode={previewMode}
+      previewRoutePath={previewRoutePath}
+      previewUser={previewUser}
+    >
+      {children}
+    </UserShell>
   );
 }
