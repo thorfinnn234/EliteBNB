@@ -60,7 +60,13 @@ export default function Login() {
       const authenticatedUser = responseUser ?? topLevelUserFields;
       const role = authenticatedUser.role ?? data.role;
 
-      login({ token, user: authenticatedUser });
+      login({
+        token,
+        user: {
+          ...authenticatedUser,
+          role,
+        },
+      });
 
       if (role === "ADMIN") {
         navigate("/admin/dashboard");
@@ -70,9 +76,15 @@ export default function Login() {
         navigate("/user/dashboard");
       }
     } catch (err) {
-      setError(
-        err.response?.data?.message || err.response?.data || "Login failed",
-      );
+      const message =
+        err.response?.data?.message || err.response?.data || "Login failed";
+
+      if (String(message).toLowerCase().includes("verify your email")) {
+        navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+        return;
+      }
+
+      setError(message);
     } finally {
       setLoading(false);
     }

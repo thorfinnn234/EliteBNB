@@ -23,8 +23,12 @@ import HostEarnings from "../pages/host/Earnings";
 import EditListing from "../pages/host/EditListing";
 import HostDashboard from "../pages/host/HostDashboard";
 import HostListings from "../pages/host/HostListings";
+import HostMessages from "../pages/host/Messages";
+import HostNotifications from "../pages/host/Notifications";
 import HostProfile from "../pages/host/HostProfile";
 import HostReservations from "../pages/host/Reservations";
+import HostReviews from "../pages/host/Reviews";
+import HostSettings from "../pages/host/Settings";
 import Home from "../pages/public/Home";
 import PropertyDetails from "../pages/public/PropertyDetails";
 import Search from "../pages/public/Search";
@@ -122,7 +126,7 @@ function NotFound() {
 /**
  * Defines the merged EliteBNB route map.
  * It keeps the full public, auth, USER, HOST, and ADMIN structure while using
- * the newer auth pages and Host pages that arrived from origin/main.
+ * the newer auth flows and Host pages that arrived from origin/main.
  */
 export default function AppRoutes() {
   return (
@@ -209,11 +213,16 @@ export default function AppRoutes() {
       <Route path="/host/dashboard" element={<HostPage><HostDashboard /></HostPage>} />
       <Route path="/host/listings" element={<HostPage><HostListings /></HostPage>} />
       <Route path="/host/listings/new" element={<HostPage><CreateListing /></HostPage>} />
+      <Route path="/host/listings/create" element={<HostPage><CreateListing /></HostPage>} />
       <Route path="/host/listings/:id/edit" element={<HostPage><EditListing /></HostPage>} />
       <Route path="/host/calendar" element={<HostPage><HostCalendar /></HostPage>} />
       <Route path="/host/reservations" element={<HostPage><HostReservations /></HostPage>} />
       <Route path="/host/earnings" element={<HostPage><HostEarnings /></HostPage>} />
       <Route path="/host/profile" element={<HostPage><HostProfile /></HostPage>} />
+      <Route path="/host/messages" element={<HostPage><HostMessages /></HostPage>} />
+      <Route path="/host/notifications" element={<HostPage><HostNotifications /></HostPage>} />
+      <Route path="/host/reviews" element={<HostPage><HostReviews /></HostPage>} />
+      <Route path="/host/settings" element={<HostPage><HostSettings /></HostPage>} />
 
       <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="/admin/dashboard" element={<AdminPage><AdminDashboard /></AdminPage>} />
