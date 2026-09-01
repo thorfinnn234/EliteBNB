@@ -54,13 +54,30 @@ export default function HostDashboard() {
           dashboardResponse,
           reservationsResponse,
           listingsResponse,
+          earningsResponse,
         ] = await Promise.all([
           hostDashboardService.getDashboard(),
           bookingService.getHostReservations(),
           propertyService.getMyProperties(),
+          hostDashboardService.getEarnings(),
         ]);
 
-        setStats(dashboardResponse.data);
+        const dashboardStats = dashboardResponse.data || {};
+        const earningsStats = earningsResponse.data || {};
+
+        setStats({
+          ...dashboardStats,
+          totalEarnings:
+            earningsStats.totalEarnings ??
+            dashboardStats.totalEarnings ??
+            dashboardStats.totalRevenue ??
+            dashboardStats.earnings ??
+            0,
+          completedReservations:
+            dashboardStats.completedReservations ??
+            earningsStats.completedReservations ??
+            0,
+        });
         setReservations(reservationsResponse.data || []);
         setListings(listingsResponse.data || []);
       } catch (err) {

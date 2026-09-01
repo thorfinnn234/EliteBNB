@@ -19,6 +19,19 @@ import {
 import { hostProfileService } from "../../services/hostProfileService";
 import { useAuth } from "../../hooks/useAuth";
 
+const maskEmail = (email = "") => {
+  const [name, domain] = email.split("@");
+
+  if (!name || !domain) return email;
+
+  const visibleName =
+    name.length <= 2
+      ? `${name.charAt(0)}***`
+      : `${name.slice(0, 2)}***${name.slice(-1)}`;
+
+  return `${visibleName}@${domain}`;
+};
+
 export default function HostProfile() {
   const fileInputRef = useRef(null);
   const auth = useAuth();
@@ -73,7 +86,6 @@ export default function HostProfile() {
       const data = response.data;
 
       setProfile(data);
-      syncProfileState(data);
 
       setFormData({
         firstName: data.firstName || "",
@@ -270,6 +282,41 @@ export default function HostProfile() {
   const initials = `${
     formData.firstName?.[0] || ""
   }${formData.lastName?.[0] || ""}`.toUpperCase();
+  const completionItems = [
+    {
+      label: "Name",
+      complete: Boolean(
+        formData.firstName.trim() &&
+          formData.lastName.trim()
+      ),
+    },
+    {
+      label: "Email",
+      complete: Boolean(formData.email),
+    },
+    {
+      label: "Phone",
+      complete: Boolean(formData.phoneNumber.trim()),
+    },
+    {
+      label: "Location",
+      complete: Boolean(formData.location.trim()),
+    },
+    {
+      label: "Bio",
+      complete: Boolean(formData.bio.trim()),
+    },
+    {
+      label: "Photo",
+      complete: Boolean(formData.profileImageUrl),
+    },
+  ];
+  const completedItems = completionItems.filter(
+    (item) => item.complete
+  ).length;
+  const completionPercent = Math.round(
+    (completedItems / completionItems.length) * 100
+  );
 
   if (loading) {
     return (
@@ -413,6 +460,46 @@ export default function HostProfile() {
 
           <div className="my-8 border-t border-[#E5E7EB]" />
 
+          <div className="mb-8 rounded-2xl border border-[#E5E7EB] bg-[#FAF9F6] p-5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h3 className="text-lg font-bold text-[#172554]">
+                  Complete profile
+                </h3>
+
+                <p className="mt-1 text-sm text-[#64748B]">
+                  {completedItems} of {completionItems.length} items completed
+                </p>
+              </div>
+
+              <p className="text-3xl font-extrabold text-[#D4A72C]">
+                {completionPercent}%
+              </p>
+            </div>
+
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
+              <div
+                className="h-full rounded-full bg-[#D4A72C] transition-all"
+                style={{ width: `${completionPercent}%` }}
+              />
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {completionItems.map((item) => (
+                <span
+                  key={item.label}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                    item.complete
+                      ? "bg-green-50 text-green-700"
+                      : "bg-white text-[#64748B]"
+                  }`}
+                >
+                  {item.complete ? "Done" : "Missing"}: {item.label}
+                </span>
+              ))}
+            </div>
+          </div>
+
           {/* PERSONAL INFORMATION */}
           <div>
             <h3 className="mb-6 text-lg font-bold text-[#172554]">
@@ -462,7 +549,7 @@ export default function HostProfile() {
 
                 <input
                   type="email"
-                  value={formData.email}
+                  value={maskEmail(formData.email)}
                   disabled
                   className="w-full cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-[#F1F5F9] px-4 py-3 text-[#64748B]"
                 />

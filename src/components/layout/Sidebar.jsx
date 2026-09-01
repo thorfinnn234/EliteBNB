@@ -1,5 +1,6 @@
 import {
   Home,
+  Bell,
   Search,
   CalendarDays,
   Heart,
@@ -20,14 +21,15 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const routesByRole = {
   USER: {
-    home: "/",
+    home: "/user/home",
     explore: "/explore",
-    trips: "/trips",
-    wishlist: "/wishlist",
-    messages: "/messages",
-    reviews: "/reviews",
-    profile: "/profile",
-    settings: "/settings",
+    trips: "/user/trips",
+    wishlist: "/user/wishlist",
+    messages: "/user/messages",
+    notifications: "/user/notifications",
+    reviews: "/user/reviews",
+    profile: "/user/profile",
+    settings: "/user/settings",
   },
 
   HOST: {
@@ -62,6 +64,7 @@ const menuByRole = {
     { label: "Trips", icon: CalendarDays, key: "trips" },
     { label: "Wishlist", icon: Heart, key: "wishlist" },
     { label: "Messages", icon: MessageSquare, key: "messages" },
+    { label: "Notifications", icon: Bell, key: "notifications" },
     { label: "Reviews", icon: Star, key: "reviews" },
     { label: "Profile", icon: User, key: "profile" },
     { label: "Settings", icon: Settings, key: "settings" },

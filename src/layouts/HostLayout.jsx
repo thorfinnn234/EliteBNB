@@ -13,7 +13,6 @@ export default function HostLayout({ children }) {
   const profileButtonRef = useRef(null);
   const navigate = useNavigate();
   const auth = useAuth();
-  const { logout } = auth;
   const currentUser = auth?.user;
   const headerUser = {
     ...currentUser,
@@ -87,7 +86,12 @@ export default function HostLayout({ children }) {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      if (auth?.logout) {
+        await auth.logout();
+      } else {
+        localStorage.removeItem("token");
+      }
+
       navigate("/login");
     } catch (error) {
       console.error("Logout failed:", error);
