@@ -17,6 +17,7 @@ import Register from "../pages/auth/Register";
 import ResetPassword from "../pages/auth/ResetPassword";
 import VerifyEmail from "../pages/auth/VerifyEmail";
 import VerifyResetCode from "../pages/auth/VerifyResetCode";
+import HostPreview from "../pages/dev/HostPreview";
 import HostCalendar from "../pages/host/Calendar";
 import CreateListing from "../pages/host/CreateListing";
 import HostEarnings from "../pages/host/Earnings";
@@ -198,6 +199,7 @@ export default function AppRoutes() {
               </DevUserPreviewPage>
             }
           />
+          <Route path="/dev/host-preview" element={<HostPreview />} />
         </>
       ) : null}
 

@@ -2,10 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  BadgeCheck,
+  BedDouble,
   Building2,
   CalendarDays,
   Clock3,
+  Eye,
+  MapPin,
   Plus,
+  Users,
   Wallet,
 } from "lucide-react";
 
@@ -13,31 +18,171 @@ import { useAuth } from "../../hooks/useAuth";
 import { propertyService } from "../../services/propertyService";
 import { bookingService } from "../../services/bookingService";
 import { hostDashboardService } from "../../services/hostDashboardService";
+import "./HostDashboard.css";
 
-export default function HostDashboard() {
-  const navigate = useNavigate();
-  const auth = useAuth();
+const defaultStats = {
+  totalListings: 0,
+  activeListings: 0,
+  totalReservations: 0,
+  pendingReservations: 0,
+  confirmedReservations: 0,
+  completedReservations: 0,
+  cancelledReservations: 0,
+  totalEarnings: 0,
+};
 
-  const currentUser = auth?.user;
-
-  const userFirstName =
+/**
+ * Extracts a friendly first name from whichever user shape AuthContext has
+ * available after login or session restoration.
+ */
+function getHostFirstName(currentUser) {
+  return (
     currentUser?.firstName ||
     currentUser?.first_name ||
     currentUser?.name?.split(" ")[0] ||
     currentUser?.fullName?.split(" ")[0] ||
-    "Host";
+    "Host"
+  );
+}
 
-  const [stats, setStats] = useState({
-    totalListings: 0,
-    activeListings: 0,
-    totalReservations: 0,
-    pendingReservations: 0,
-    confirmedReservations: 0,
-    completedReservations: 0,
-    cancelledReservations: 0,
-    totalEarnings: 0,
-  });
+/**
+ * Formats backend money values for the Nigerian market without changing the
+ * stored currency or inventing a new pricing contract.
+ */
+function formatMoney(amount) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(Number(amount || 0));
+}
 
+/**
+ * Formats API date strings defensively because reservations may arrive as
+ * nullable fields while backend integration is still evolving.
+ */
+function formatDate(date) {
+  if (!date) return "Date pending";
+
+  return new Intl.DateTimeFormat("en-NG", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${date}T00:00:00`));
+}
+
+/**
+ * Converts backend enum values into readable labels while preserving the
+ * original status values used by reservation/listing logic.
+ */
+function formatStatus(status) {
+  if (!status) return "Unknown";
+
+  return status
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+/**
+ * Maps reservation/listing statuses to restrained operational badges.
+ */
+function getStatusClasses(status) {
+  switch (status) {
+    case "CONFIRMED":
+      return "is-confirmed";
+
+    case "PENDING":
+      return "is-pending";
+
+    case "COMPLETED":
+      return "is-completed";
+
+    case "CANCELLED":
+      return "is-cancelled";
+
+    case "ACTIVE":
+      return "is-active";
+
+    default:
+      return "is-muted";
+  }
+}
+
+/**
+ * Finds the best available image from current and recently merged property
+ * response shapes without requiring a service or backend contract change.
+ */
+function getListingImage(listing) {
+  if (listing?.coverImage) return listing.coverImage;
+  if (listing?.imageUrls?.length > 0) return listing.imageUrls[0];
+
+  const firstImage = listing?.images?.[0];
+
+  if (typeof firstImage === "string") return firstImage;
+
+  return firstImage?.imageUrl || firstImage?.url || "";
+}
+
+/**
+ * Builds a readable property location from whichever address fields the
+ * backend includes in a listing response.
+ */
+function getListingLocation(listing) {
+  const detailedLocation = [
+    listing?.address,
+    listing?.city,
+    listing?.state,
+    listing?.country,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return detailedLocation || listing?.location || "Location unavailable";
+}
+
+/**
+ * Preserves existing reservation guest fallbacks so dashboard UI keeps working
+ * across both flat and nested booking response shapes.
+ */
+function getGuestName(booking) {
+  const nestedName = [
+    booking?.guest?.firstName,
+    booking?.guest?.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return booking?.guestName || nestedName || "Guest";
+}
+
+/**
+ * Reads the reservation property title from either the flat host DTO or a
+ * nested property object.
+ */
+function getBookingPropertyTitle(booking) {
+  return booking?.propertyTitle || booking?.property?.title || "Property";
+}
+
+/**
+ * Keeps the guest count display compatible with current booking DTO variants.
+ */
+function getGuestCount(booking) {
+  return booking?.numberOfGuests ?? booking?.guests ?? "-";
+}
+
+/**
+ * Renders the backend-connected Host dashboard as an operations workspace.
+ * Data fetching and mutation boundaries remain unchanged; only presentation is
+ * refined for clearer hospitality operations.
+ */
+export default function HostDashboard() {
+  const navigate = useNavigate();
+  const auth = useAuth();
+
+  const userFirstName = getHostFirstName(auth?.user);
+
+  const [stats, setStats] = useState(defaultStats);
   const [reservations, setReservations] = useState([]);
   const [listings, setListings] = useState([]);
 
@@ -45,6 +190,11 @@ export default function HostDashboard() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    /**
+     * Loads the same three dashboard data sources that were already connected
+     * to the backend: aggregate Host stats, Host reservations, and Host
+     * properties. Only presentation changes happen after the data is returned.
+     */
     const loadDashboard = async () => {
       try {
         setLoading(true);
@@ -60,14 +210,14 @@ export default function HostDashboard() {
           propertyService.getMyProperties(),
         ]);
 
-        setStats(dashboardResponse.data);
+        setStats({
+          ...defaultStats,
+          ...(dashboardResponse.data || {}),
+        });
         setReservations(reservationsResponse.data || []);
         setListings(listingsResponse.data || []);
       } catch (err) {
-        console.error(
-          "Failed to load host dashboard:",
-          err
-        );
+        console.error("Failed to load host dashboard:", err);
 
         setError(
           err.response?.data?.message ||
@@ -81,53 +231,35 @@ export default function HostDashboard() {
     loadDashboard();
   }, []);
 
-  const formatMoney = (amount) =>
-    new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(Number(amount || 0));
+  if (loading) {
+    return <HostDashboardLoading />;
+  }
 
-  const formatDate = (date) => {
-    if (!date) return "";
+  return (
+    <HostDashboardView
+      userFirstName={userFirstName}
+      stats={stats}
+      reservations={reservations}
+      listings={listings}
+      error={error}
+      onNavigate={navigate}
+    />
+  );
+}
 
-    return new Intl.DateTimeFormat("en-NG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(`${date}T00:00:00`));
-  };
-
-  const formatStatus = (status) => {
-    if (!status) return "";
-
-    return status
-      .replaceAll("_", " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (letter) =>
-        letter.toUpperCase()
-      );
-  };
-
-  const getStatusClasses = (status) => {
-    switch (status) {
-      case "CONFIRMED":
-        return "bg-green-50 text-green-700";
-
-      case "PENDING":
-        return "bg-yellow-50 text-yellow-700";
-
-      case "COMPLETED":
-        return "bg-blue-50 text-blue-700";
-
-      case "CANCELLED":
-        return "bg-red-50 text-red-700";
-
-      default:
-        return "bg-slate-100 text-slate-700";
-    }
-  };
-
+/**
+ * Renders the dashboard presentation from supplied data. Production passes real
+ * backend responses through this view; the development preview passes isolated
+ * presentation data so it can visually review the same UI without auth calls.
+ */
+export function HostDashboardView({
+  userFirstName = "Host",
+  stats = defaultStats,
+  reservations = [],
+  listings = [],
+  error = "",
+  onNavigate = () => {},
+}) {
   const upcomingReservations = useMemo(() => {
     return reservations
       .filter(
@@ -144,501 +276,615 @@ export default function HostDashboard() {
   }, [reservations]);
 
   const recentListings = listings.slice(0, 3);
+  const inactiveListings = Math.max(
+    0,
+    (stats.totalListings || 0) - (stats.activeListings || 0)
+  );
 
   const dashboardCards = [
     {
-      title: "Total Earnings",
+      title: "Revenue secured",
       value: formatMoney(stats.totalEarnings),
       subtitle: `${stats.completedReservations || 0} completed stays`,
       icon: Wallet,
+      tone: "dark",
     },
     {
-      title: "Total Listings",
-      value: stats.totalListings || 0,
-      subtitle: `${stats.activeListings || 0} active listings`,
+      title: "Active portfolio",
+      value: stats.activeListings || 0,
+      subtitle: `${stats.totalListings || 0} total listings`,
       icon: Building2,
+      tone: "light",
     },
     {
-      title: "Reservations",
+      title: "Guest flow",
       value: stats.totalReservations || 0,
       subtitle: `${stats.confirmedReservations || 0} confirmed`,
       icon: CalendarDays,
+      tone: "light",
     },
     {
-      title: "Pending Requests",
+      title: "Needs attention",
       value: stats.pendingReservations || 0,
-      subtitle: "Awaiting your response",
+      subtitle: "Pending reservation requests",
       icon: Clock3,
+      tone: stats.pendingReservations ? "gold" : "light",
     },
   ];
 
-  if (loading) {
-    return (
-      <section className="min-h-screen bg-[#FAF9F6] p-4 md:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-10 text-center shadow-sm">
-            <p className="font-semibold text-[#172554]">
-              Loading your dashboard...
-            </p>
-
-            <p className="mt-2 text-sm text-[#64748B]">
-              Fetching your listings and reservations.
-            </p>
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const reservationBreakdown = [
+    ["Pending", stats.pendingReservations, "is-pending"],
+    ["Confirmed", stats.confirmedReservations, "is-confirmed"],
+    ["Completed", stats.completedReservations, "is-completed"],
+    ["Cancelled", stats.cancelledReservations, "is-cancelled"],
+  ];
+  const leadListing = recentListings[0];
 
   return (
-    <section className="min-h-screen bg-[#FAF9F6] p-4 md:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl">
-
-        {/* HEADER */}
-        <div className="mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D4A72C]">
-              HOST DASHBOARD
+    <section className="elite-host-dashboard">
+      <div className="elite-host-dashboard__inner">
+        <header className="elite-host-dashboard__hero">
+          <div className="elite-host-dashboard__hero-copy">
+            <p className="elite-host-dashboard__eyebrow">
+              Daily host briefing
             </p>
 
-            <h1 className="mt-2 text-3xl font-extrabold text-[#172554] md:text-4xl">
-              Welcome back, {userFirstName} 👋
-            </h1>
+            <h1>Good to see you, {userFirstName}.</h1>
 
-            <p className="mt-2 text-[#64748B]">
-              Here's what's happening with your
-              EliteBNB properties.
+            <p>
+              Guests, residences, and decisions for the next movement of your
+              EliteBNB portfolio.
             </p>
+
+            <div className="elite-host-dashboard__hero-actions">
+              <button
+                type="button"
+                className="elite-host-dashboard__primary-action"
+                onClick={() => onNavigate("/host/listings/create")}
+              >
+                <Plus size={18} strokeWidth={1.9} />
+                Add listing
+              </button>
+
+              <button
+                type="button"
+                className="elite-host-dashboard__secondary-action"
+                onClick={() => onNavigate("/host/reservations")}
+              >
+                Review reservations
+                <ArrowRight size={16} strokeWidth={1.9} />
+              </button>
+            </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              navigate("/host/listings/create")
+          <HostHeroProperty
+            listing={leadListing}
+            onManage={() =>
+              leadListing
+                ? onNavigate(`/host/listings/${leadListing.id}/edit`)
+                : onNavigate("/host/listings/create")
             }
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#D4A72C] px-5 py-3 font-semibold text-white transition hover:bg-[#b88d1d]"
-          >
-            <Plus size={18} />
-            Add Listing
-          </button>
-        </div>
+          />
 
-        {/* ERROR */}
+          <aside className="elite-host-dashboard__attention">
+            <span className="elite-host-dashboard__attention-label">
+              What needs attention
+            </span>
+
+            <strong>{stats.pendingReservations || 0}</strong>
+
+            <p>
+              {stats.pendingReservations
+                ? "Pending reservation requests are waiting for a host decision."
+                : "No pending reservation requests right now."}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => onNavigate("/host/reservations")}
+            >
+              Open reservation desk
+              <ArrowRight size={15} strokeWidth={1.9} />
+            </button>
+          </aside>
+        </header>
+
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          <div className="elite-host-dashboard__alert" role="alert">
             {error}
           </div>
         )}
 
-        {/* SUMMARY CARDS */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {dashboardCards.map((stat) => {
-            const Icon = stat.icon;
-
-            return (
-              <div
-                key={stat.title}
-                className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[#64748B]">
-                      {stat.title}
-                    </p>
-
-                    <h2 className="mt-3 text-2xl font-bold text-[#172554]">
-                      {stat.value}
-                    </h2>
-                  </div>
-
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D4A72C]/10 text-[#D4A72C]">
-                    <Icon size={21} />
-                  </div>
-                </div>
-
-                <p className="mt-3 text-sm text-[#94A3B8]">
-                  {stat.subtitle}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* RESERVATIONS */}
-        <div className="mt-6 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-[#172554]">
-                Upcoming Reservations
-              </h2>
-
-              <p className="mt-1 text-sm text-[#64748B]">
-                Your pending and confirmed stays.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate("/host/reservations")
-              }
-              className="flex items-center gap-1 text-sm font-semibold text-[#D4A72C] hover:underline"
-            >
-              View all
-              <ArrowRight size={15} />
-            </button>
-          </div>
-
-          {upcomingReservations.length === 0 ? (
-            <div className="rounded-xl bg-[#FAF9F6] px-5 py-10 text-center">
-              <CalendarDays
-                size={30}
-                className="mx-auto text-[#94A3B8]"
-              />
-
-              <p className="mt-3 font-semibold text-[#172554]">
-                No upcoming reservations
-              </p>
-
-              <p className="mt-1 text-sm text-[#64748B]">
-                New reservations will appear here.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left">
-
-                <thead>
-                  <tr className="border-b border-[#E5E7EB] text-sm text-[#64748B]">
-                    <th className="px-3 py-3 font-medium">
-                      Guest
-                    </th>
-
-                    <th className="px-3 py-3 font-medium">
-                      Property
-                    </th>
-
-                    <th className="px-3 py-3 font-medium">
-                      Stay
-                    </th>
-
-                    <th className="px-3 py-3 font-medium">
-                      Guests
-                    </th>
-
-                    <th className="px-3 py-3 font-medium">
-                      Amount
-                    </th>
-
-                    <th className="px-3 py-3 font-medium">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {upcomingReservations.map(
-                    (booking) => (
-                      <tr
-                        key={booking.id}
-                        className="border-b border-[#F1F5F9] last:border-0"
-                      >
-                        <td className="px-3 py-4 font-semibold text-[#172554]">
-                          {booking.guestName ||
-                            booking.guest?.firstName ||
-                            "Guest"}
-                        </td>
-
-                        <td className="px-3 py-4 text-[#475569]">
-                          {booking.propertyTitle ||
-                            booking.property?.title ||
-                            "Property"}
-                        </td>
-
-                        <td className="px-3 py-4 text-sm text-[#64748B]">
-                          {formatDate(
-                            booking.checkIn
-                          )}{" "}
-                          –{" "}
-                          {formatDate(
-                            booking.checkOut
-                          )}
-                        </td>
-
-                        <td className="px-3 py-4 text-sm text-[#64748B]">
-                          {booking.numberOfGuests ??
-                            booking.guests ??
-                            "-"}
-                        </td>
-
-                        <td className="px-3 py-4 font-semibold text-[#172554]">
-                          {formatMoney(
-                            booking.totalAmount
-                          )}
-                        </td>
-
-                        <td className="px-3 py-4">
-                          <span
-                            className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusClasses(
-                              booking.status
-                            )}`}
-                          >
-                            {formatStatus(
-                              booking.status
-                            )}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* RESERVATION BREAKDOWN */}
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-bold text-[#172554]">
-              Reservation Overview
-            </h2>
-
-            <p className="mt-1 text-sm text-[#64748B]">
-              Current status of your reservations.
-            </p>
-
-            <div className="mt-6 space-y-4">
-              {[
-                [
-                  "Pending",
-                  stats.pendingReservations,
-                  "bg-yellow-500",
-                ],
-                [
-                  "Confirmed",
-                  stats.confirmedReservations,
-                  "bg-green-500",
-                ],
-                [
-                  "Completed",
-                  stats.completedReservations,
-                  "bg-blue-500",
-                ],
-                [
-                  "Cancelled",
-                  stats.cancelledReservations,
-                  "bg-red-500",
-                ],
-              ].map(([label, value, color]) => (
-                <div
-                  key={label}
-                  className="flex items-center justify-between rounded-xl bg-[#FAF9F6] px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`h-2.5 w-2.5 rounded-full ${color}`}
-                    />
-
-                    <span className="text-sm font-medium text-[#64748B]">
-                      {label}
-                    </span>
-                  </div>
-
-                  <span className="font-bold text-[#172554]">
-                    {value || 0}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* LISTING OVERVIEW */}
-          <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-            <h2 className="text-xl font-bold text-[#172554]">
-              Listing Overview
-            </h2>
-
-            <p className="mt-1 text-sm text-[#64748B]">
-              Quick snapshot of your properties.
-            </p>
-
-            <div className="mt-8">
-              <p className="text-4xl font-extrabold text-[#172554]">
-                {stats.totalListings || 0}
-              </p>
-
-              <p className="mt-1 text-sm text-[#64748B]">
-                Total properties
-              </p>
-
-              <div className="mt-6 grid grid-cols-2 gap-4">
-                <div className="rounded-xl bg-green-50 p-4">
-                  <p className="text-2xl font-bold text-green-700">
-                    {stats.activeListings || 0}
-                  </p>
-
-                  <p className="mt-1 text-sm text-green-700/70">
-                    Active
-                  </p>
-                </div>
-
-                <div className="rounded-xl bg-[#FAF9F6] p-4">
-                  <p className="text-2xl font-bold text-[#172554]">
-                    {Math.max(
-                      0,
-                      (stats.totalListings || 0) -
-                        (stats.activeListings || 0)
-                    )}
-                  </p>
-
-                  <p className="mt-1 text-sm text-[#64748B]">
-                    Inactive
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* LISTINGS */}
-        <div className="mt-6 rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
-
-          <div className="mb-5 flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-[#172554]">
-                Your Listings
-              </h2>
-
-              <p className="mt-1 text-sm text-[#64748B]">
-                Your recently added properties.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                navigate("/host/listings")
-              }
-              className="flex items-center gap-1 text-sm font-semibold text-[#D4A72C] hover:underline"
-            >
-              View all
-              <ArrowRight size={15} />
-            </button>
-          </div>
+        <section className="elite-host-dashboard__panel elite-host-dashboard__portfolio">
+          <PanelHeader
+            eyebrow="Property portfolio"
+            title="Your listings"
+            description="Recently added residences and the next property to refine."
+            actionLabel="Manage all"
+            onAction={() => onNavigate("/host/listings")}
+          />
 
           {recentListings.length === 0 ? (
             <button
               type="button"
-              onClick={() =>
-                navigate("/host/listings/new")
-              }
-              className="flex w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] py-12 text-[#64748B] transition hover:border-[#D4A72C] hover:text-[#D4A72C]"
+              onClick={() => onNavigate("/host/listings/new")}
+              className="elite-host-dashboard__empty-listing"
             >
-              <Plus size={30} />
-
-              <span className="mt-2 font-semibold">
-                Create your first listing
-              </span>
+              <Plus size={28} strokeWidth={1.8} />
+              <span>Create your first listing</span>
             </button>
           ) : (
-            <div className="grid gap-5 md:grid-cols-3">
-              {recentListings.map((listing) => (
-                <div
+            <div className="elite-host-dashboard__listing-grid">
+              {recentListings.map((listing, index) => (
+                <ListingPreviewCard
                   key={listing.id}
-                  className="overflow-hidden rounded-xl border border-[#E5E7EB] transition hover:shadow-md"
-                >
-                  <div className="h-40 bg-[#E2E8F0]">
-                    {listing.imageUrls?.length >
-                    0 ? (
-                      <img
-                        src={
-                          listing.imageUrls[0]
-                        }
-                        alt={listing.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#64748B]">
-                        No image
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="font-bold text-[#172554]">
-                        {listing.title}
-                      </h3>
-
-                      <span
-                        className={`rounded-full px-2 py-1 text-[11px] font-semibold ${
-                          listing.status ===
-                          "ACTIVE"
-                            ? "bg-green-50 text-green-700"
-                            : "bg-slate-100 text-slate-600"
-                        }`}
-                      >
-                        {formatStatus(
-                          listing.status
-                        )}
-                      </span>
-                    </div>
-
-                    <p className="mt-1 text-sm text-[#64748B]">
-                      {listing.location}
-                    </p>
-
-                    <div className="mt-4 flex items-center justify-between gap-3">
-                      <span className="font-bold text-[#172554]">
-                        {formatMoney(
-                          listing.pricePerNight
-                        )}
-                        <span className="text-xs font-normal text-[#64748B]">
-                          {" "}
-                          / night
-                        </span>
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate(
-                            `/host/listings/${listing.id}/edit`
-                          )
-                        }
-                        className="text-xs font-semibold text-[#D4A72C]"
-                      >
-                        Manage
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                  listing={listing}
+                  index={index}
+                  onManage={() =>
+                    onNavigate(`/host/listings/${listing.id}/edit`)
+                  }
+                />
               ))}
 
               {recentListings.length < 3 && (
                 <button
                   type="button"
-                  onClick={() =>
-                    navigate(
-                      "/host/listings/new"
-                    )
-                  }
-                  className="flex min-h-[250px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#CBD5E1] text-[#64748B] transition hover:border-[#D4A72C] hover:text-[#D4A72C]"
+                  onClick={() => onNavigate("/host/listings/new")}
+                  className="elite-host-dashboard__listing-add"
                 >
-                  <Plus size={28} />
-
-                  <span className="mt-2 font-semibold">
-                    Add new listing
-                  </span>
+                  <Plus size={28} strokeWidth={1.8} />
+                  <span>Add new listing</span>
                 </button>
               )}
             </div>
           )}
+        </section>
+
+        <section
+          className="elite-host-dashboard__metrics"
+          aria-label="Host performance metrics"
+        >
+          {dashboardCards.map((stat) => (
+            <HostMetricCard key={stat.title} stat={stat} />
+          ))}
+        </section>
+
+        <section
+          className="elite-host-dashboard__quick-actions"
+          aria-label="Host quick actions"
+        >
+          <QuickAction
+            title="Create a new listing"
+            description="Add a residence, amenities, pricing, and photography."
+            icon={Plus}
+            onClick={() => onNavigate("/host/listings/create")}
+          />
+          <QuickAction
+            title="Manage availability"
+            description="Block dates before guests request them."
+            icon={CalendarDays}
+            onClick={() => onNavigate("/host/calendar")}
+          />
+          <QuickAction
+            title="Review portfolio"
+            description="Update active listings and property details."
+            icon={Building2}
+            onClick={() => onNavigate("/host/listings")}
+          />
+        </section>
+
+        <div className="elite-host-dashboard__operations-grid">
+          <section className="elite-host-dashboard__panel elite-host-dashboard__panel--reservations">
+            <PanelHeader
+              eyebrow="Guest movement"
+              title="Upcoming reservations"
+              description="Pending and confirmed stays sorted by arrival."
+              actionLabel="View all"
+              onAction={() => onNavigate("/host/reservations")}
+            />
+
+            {upcomingReservations.length === 0 ? (
+              <EmptyOperationsState
+                icon={CalendarDays}
+                title="No upcoming reservations"
+                description="New reservation requests and confirmed stays will appear here."
+              />
+            ) : (
+              <div className="elite-host-dashboard__reservation-list">
+                {upcomingReservations.map((booking) => (
+                  <ReservationCard
+                    key={booking.id}
+                    booking={booking}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <aside className="elite-host-dashboard__side-stack">
+            <section className="elite-host-dashboard__panel elite-host-dashboard__panel--revenue">
+              <p className="elite-host-dashboard__panel-kicker">
+                Earnings detail
+              </p>
+
+              <strong>{stats.completedReservations || 0}</strong>
+
+              <span>
+                Completed stays are already represented in the revenue KPI.
+                Open the earnings room for the full backend breakdown.
+              </span>
+
+              <button
+                type="button"
+                onClick={() => onNavigate("/host/earnings")}
+              >
+                Open earnings
+                <ArrowRight size={15} strokeWidth={1.9} />
+              </button>
+            </section>
+
+            <section className="elite-host-dashboard__panel">
+              <PanelHeader
+                eyebrow="Reservation mix"
+                title="Status overview"
+                description="Current state of booking activity."
+              />
+
+              <div className="elite-host-dashboard__status-list">
+                {reservationBreakdown.map(([label, value, tone]) => (
+                  <ReservationStatusRow
+                    key={label}
+                    label={label}
+                    value={value}
+                    tone={tone}
+                    total={stats.totalReservations}
+                  />
+                ))}
+              </div>
+            </section>
+
+            <section className="elite-host-dashboard__panel elite-host-dashboard__listing-health">
+              <PanelHeader
+                eyebrow="Portfolio health"
+                title={`${stats.totalListings || 0} properties`}
+                description="Active and inactive listing visibility."
+              />
+
+              <div className="elite-host-dashboard__health-grid">
+                <div>
+                  <strong>{stats.activeListings || 0}</strong>
+                  <span>Active</span>
+                </div>
+                <div>
+                  <strong>{inactiveListings}</strong>
+                  <span>Inactive</span>
+                </div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Gives the dashboard hero a property-management focal point using the first
+ * available Host listing. It falls back to an add-listing prompt when the
+ * backend has not returned any listings yet.
+ */
+function HostHeroProperty({ listing, onManage }) {
+  const image = getListingImage(listing);
+
+  if (!listing) {
+    return (
+      <aside className="elite-host-dashboard__hero-property is-empty">
+        <span className="elite-host-dashboard__hero-property-kicker">
+          Portfolio room
+        </span>
+        <strong>No listing in focus yet.</strong>
+        <p>Create a residence profile before guests can discover your stay.</p>
+        <button type="button" onClick={onManage}>
+          Add listing
+          <ArrowRight size={15} strokeWidth={1.9} />
+        </button>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="elite-host-dashboard__hero-property">
+      <div className="elite-host-dashboard__hero-property-media">
+        {image ? (
+          <img src={image} alt={listing.title} />
+        ) : (
+          <div>
+            <Building2 size={26} strokeWidth={1.75} />
+            <span>No image</span>
+          </div>
+        )}
+
+        <span
+          className={`elite-host-dashboard__status ${getStatusClasses(
+            listing.status
+          )}`}
+        >
+          {formatStatus(listing.status)}
+        </span>
+      </div>
+
+      <div className="elite-host-dashboard__hero-property-copy">
+        <span className="elite-host-dashboard__hero-property-kicker">
+          Property in focus
+        </span>
+        <strong>{listing.title}</strong>
+        <p>{getListingLocation(listing)}</p>
+        <button type="button" onClick={onManage}>
+          Manage residence
+          <ArrowRight size={15} strokeWidth={1.9} />
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * Shows a layout-matched dashboard loading state rather than a generic spinner.
+ */
+function HostDashboardLoading() {
+  return (
+    <section className="elite-host-dashboard">
+      <div className="elite-host-dashboard__inner">
+        <div className="elite-host-dashboard__loading-hero">
+          <span />
+          <span />
+          <span />
+        </div>
+
+        <div className="elite-host-dashboard__loading-grid">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <span key={index} />
+          ))}
+        </div>
+
+        <div className="elite-host-dashboard__loading-panel">
+          <p>Loading your dashboard...</p>
+          <small>Fetching your listings and reservations.</small>
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * Presents one backend-derived KPI using a tone that matches its operational
+ * importance without inventing analytics beyond the current API response.
+ */
+function HostMetricCard({ stat }) {
+  const Icon = stat.icon;
+
+  return (
+    <article
+      className={`elite-host-dashboard__metric is-${stat.tone}`}
+    >
+      <div>
+        <span>{stat.title}</span>
+        <strong>{stat.value}</strong>
+        <p>{stat.subtitle}</p>
+      </div>
+
+      <span className="elite-host-dashboard__metric-icon" aria-hidden="true">
+        <Icon size={22} strokeWidth={1.85} />
+      </span>
+    </article>
+  );
+}
+
+/**
+ * Renders a dashboard-level shortcut as a real button so keyboard users can
+ * reach the same operational actions as pointer users.
+ */
+function QuickAction({ title, description, icon: Icon, onClick }) {
+  return (
+    <button
+      type="button"
+      className="elite-host-dashboard__quick-action"
+      onClick={onClick}
+    >
+      <span className="elite-host-dashboard__quick-icon" aria-hidden="true">
+        <Icon size={19} strokeWidth={1.9} />
+      </span>
+      <span>
+        <strong>{title}</strong>
+        <small>{description}</small>
+      </span>
+      <ArrowRight size={16} strokeWidth={1.9} aria-hidden="true" />
+    </button>
+  );
+}
+
+/**
+ * Standardizes panel headers and optional navigation actions across dashboard
+ * modules without changing the underlying data source.
+ */
+function PanelHeader({
+  eyebrow,
+  title,
+  description,
+  actionLabel,
+  onAction,
+}) {
+  return (
+    <div className="elite-host-dashboard__panel-header">
+      <div>
+        <span>{eyebrow}</span>
+        <h2>{title}</h2>
+        {description && <p>{description}</p>}
+      </div>
+
+      {actionLabel && (
+        <button type="button" onClick={onAction}>
+          {actionLabel}
+          <ArrowRight size={15} strokeWidth={1.9} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Displays one upcoming reservation as an itinerary-style row/card, preserving
+ * all field fallbacks from the previous table view.
+ */
+function ReservationCard({ booking }) {
+  return (
+    <article className="elite-host-dashboard__reservation-card">
+      <div className="elite-host-dashboard__reservation-date">
+        <CalendarDays size={18} strokeWidth={1.9} />
+        <span>{formatDate(booking.checkIn)}</span>
+      </div>
+
+      <div className="elite-host-dashboard__reservation-main">
+        <div>
+          <h3>{getBookingPropertyTitle(booking)}</h3>
+          <p>Guest: {getGuestName(booking)}</p>
+        </div>
+
+        <div className="elite-host-dashboard__reservation-meta">
+          <span>
+            <Clock3 size={14} strokeWidth={1.9} />
+            {formatDate(booking.checkOut)}
+          </span>
+          <span>
+            <Users size={14} strokeWidth={1.9} />
+            {getGuestCount(booking)} guests
+          </span>
+        </div>
+      </div>
+
+      <div className="elite-host-dashboard__reservation-side">
+        <strong>{formatMoney(booking.totalAmount)}</strong>
+        <span
+          className={`elite-host-dashboard__status ${getStatusClasses(
+            booking.status
+          )}`}
+        >
+          {formatStatus(booking.status)}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Shows one reservation-status line with a proportional bar based only on the
+ * backend-provided reservation totals.
+ */
+function ReservationStatusRow({ label, value = 0, tone, total = 0 }) {
+  const percentage = total ? Math.round((Number(value || 0) / total) * 100) : 0;
+
+  return (
+    <div className="elite-host-dashboard__status-row">
+      <div>
+        <span>{label}</span>
+        <strong>{value || 0}</strong>
+      </div>
+
+      <div className="elite-host-dashboard__status-track" aria-hidden="true">
+        <span
+          className={tone}
+          style={{ inlineSize: `${percentage}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Renders an informative empty state that matches the dashboard surface system.
+ */
+function EmptyOperationsState({ icon: Icon, title, description }) {
+  return (
+    <div className="elite-host-dashboard__empty-state">
+      <span aria-hidden="true">
+        <Icon size={30} strokeWidth={1.7} />
+      </span>
+      <strong>{title}</strong>
+      <p>{description}</p>
+    </div>
+  );
+}
+
+/**
+ * Presents one property as an operational portfolio item with existing image,
+ * location, pricing, status, and manage action fields.
+ */
+function ListingPreviewCard({ listing, index, onManage }) {
+  const image = getListingImage(listing);
+  const isFeatured = index === 0;
+
+  return (
+    <article
+      className={`elite-host-dashboard__listing-card ${
+        isFeatured ? "is-featured" : ""
+      }`}
+    >
+      <div className="elite-host-dashboard__listing-media">
+        {image ? (
+          <img src={image} alt={listing.title} />
+        ) : (
+          <div>
+            <Building2 size={28} strokeWidth={1.75} />
+            <span>No image</span>
+          </div>
+        )}
+
+        <span
+          className={`elite-host-dashboard__status ${getStatusClasses(
+            listing.status
+          )}`}
+        >
+          {formatStatus(listing.status)}
+        </span>
+      </div>
+
+      <div className="elite-host-dashboard__listing-body">
+        <div>
+          <p>
+            <MapPin size={14} strokeWidth={1.9} />
+            {getListingLocation(listing)}
+          </p>
+          <h3>{listing.title}</h3>
+        </div>
+
+        <div className="elite-host-dashboard__listing-facts">
+          <span>
+            <BedDouble size={15} strokeWidth={1.9} />
+            {listing.bedrooms ?? "-"} beds
+          </span>
+          <span>
+            <Users size={15} strokeWidth={1.9} />
+            {listing.maxGuests ?? "-"} guests
+          </span>
+          <span>
+            <BadgeCheck size={15} strokeWidth={1.9} />
+            {listing.propertyType || listing.type || "Property"}
+          </span>
+        </div>
+
+        <div className="elite-host-dashboard__listing-footer">
+          <strong>
+            {formatMoney(listing.pricePerNight)}
+            <span> / night</span>
+          </strong>
+
+          <button type="button" onClick={onManage}>
+            <Eye size={15} strokeWidth={1.9} />
+            Manage
+          </button>
+        </div>
+      </div>
+    </article>
   );
 }

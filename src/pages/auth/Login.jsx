@@ -8,6 +8,36 @@ import AuthLayout from "../../components/auth/AuthLayout";
 import GoogleIcon from "../../components/auth/GoogleIcon";
 
 /**
+ * Extracts backend auth errors into a string safe for UI rendering.
+ * Some responses provide `{ message }`, while others may return a plain string.
+ */
+function getAuthErrorMessage(error, fallback) {
+  const responseData = error.response?.data;
+
+  return (
+    responseData?.message ||
+    responseData?.error ||
+    (typeof responseData === "string" ? responseData : fallback)
+  );
+}
+
+/**
+ * Detects unverified-email login failures across likely backend phrasings.
+ * This keeps the verify-email redirect resilient without changing successful
+ * login behavior or role routing.
+ */
+function isEmailVerificationError(message) {
+  const normalizedMessage = String(message).toLowerCase();
+
+  return (
+    normalizedMessage.includes("email") &&
+    (normalizedMessage.includes("verify") ||
+      normalizedMessage.includes("verified") ||
+      normalizedMessage.includes("verification"))
+  );
+}
+
+/**
  * Renders the sign-in form and keeps successful authentication synchronized
  * with AuthContext so role-protected routes can read the logged-in user.
  */
@@ -76,10 +106,9 @@ export default function Login() {
         navigate("/user/dashboard");
       }
     } catch (err) {
-      const message =
-        err.response?.data?.message || err.response?.data || "Login failed";
+      const message = getAuthErrorMessage(err, "Login failed");
 
-      if (String(message).toLowerCase().includes("verify your email")) {
+      if (isEmailVerificationError(message)) {
         navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
         return;
       }
