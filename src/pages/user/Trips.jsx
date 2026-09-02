@@ -1,5 +1,5 @@
 import { ArrowRight, CalendarDays, CheckCircle2, MapPin, UsersRound } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ContentSkeleton,
@@ -9,8 +9,16 @@ import {
 import UserPageHeader from "../../components/user/UserPageHeader";
 import UserStatusTabs from "../../components/user/UserStatusTabs";
 import { userTripsData } from "../../data/userHomeData";
+import { bookingService } from "../../services/bookingService";
+import { groupTripsByStatus } from "../../utils/userBackendMappers";
 import "./UserHome.css";
 import "./UserPages.css";
+
+const emptyTripGroups = {
+  upcoming: [],
+  completed: [],
+  cancelled: [],
+};
 
 /**
  * Renders one guest itinerary as a visual travel card.
@@ -114,8 +122,65 @@ function TripHeroTicket({ trip }) {
  */
 export default function Trips({ previewMode = false }) {
   const [activeTab, setActiveTab] = useState("upcoming");
+  const [productionTrips, setProductionTrips] = useState(emptyTripGroups);
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    error: false,
+  });
   const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
-  const { emptyStates, presentationState, tabs, trips } = userTripsData;
+  const { emptyStates, tabs } = userTripsData;
+  const fallbackTrips = useMemo(
+    () => [
+      ...userTripsData.trips.upcoming,
+      ...userTripsData.trips.completed,
+      ...userTripsData.trips.cancelled,
+    ],
+    []
+  );
+
+  /**
+   * Loads authenticated bookings only for production USER routes. Preview
+   * remains isolated to presentation data, while backend failures become the
+   * existing section-level error state.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadTrips() {
+      try {
+        setProductionState({ isLoading: true, error: false });
+
+        const response = await bookingService.getMine();
+
+        if (!isMounted) return;
+
+        setProductionTrips(groupTripsByStatus(response.data, fallbackTrips));
+        setProductionState({ isLoading: false, error: false });
+      } catch (error) {
+        console.error("Failed to load user trips:", error);
+
+        if (isMounted) {
+          setProductionTrips(emptyTripGroups);
+          setProductionState({ isLoading: false, error: true });
+        }
+      }
+    }
+
+    loadTrips();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fallbackTrips, previewMode]);
+
+  const presentationState = previewMode
+    ? userTripsData.presentationState
+    : productionState;
+  const trips = previewMode ? userTripsData.trips : productionTrips;
   const currentTrips = trips[activeTab] ?? [];
   const nextTrip = trips.upcoming[0];
   const heroDetails = [

@@ -84,6 +84,7 @@ const routeLabels = {
   "/user/trips": "Trips",
   "/user/wishlist": "Saved stays",
   "/user/reviews": "Reviews",
+  "/user/notifications": "Notifications",
   "/user/profile": "Profile",
   "/user/booking-checkout": "Checkout",
 };

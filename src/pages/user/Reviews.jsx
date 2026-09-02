@@ -8,6 +8,13 @@ import {
 } from "../../components/user/UserFeedbackStates";
 import UserPageHeader from "../../components/user/UserPageHeader";
 import { userReviewsData } from "../../data/userHomeData";
+import { bookingService } from "../../services/bookingService";
+import { reviewService } from "../../services/reviewService";
+import {
+  mapBookingToReviewPrompt,
+  mapReviewToSubmitted,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
 import "./UserHome.css";
 import "./UserPages.css";
 
@@ -161,15 +168,31 @@ function ReviewModal({
  * The modal demonstrates form validation and submit feedback while leaving
  * eligibility and persistence to the future backend integration.
  */
-export default function Reviews() {
+export default function Reviews({ previewMode = false }) {
   const [activeStay, setActiveStay] = useState(null);
   const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState("");
+  const [productionReviews, setProductionReviews] = useState({
+    readyToReview: [],
+    submitted: [],
+  });
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    error: false,
+  });
   const submitTimerRef = useRef(null);
-  const { emptyStates, presentationState, readyToReview, submitted } =
-    userReviewsData;
+  const { emptyStates } = userReviewsData;
+  const presentationState = previewMode
+    ? userReviewsData.presentationState
+    : productionState;
+  const readyToReview = previewMode
+    ? userReviewsData.readyToReview
+    : productionReviews.readyToReview;
+  const submitted = previewMode
+    ? userReviewsData.submitted
+    : productionReviews.submitted;
   const heroMemory = submitted[0] ?? readyToReview[0];
   const heroDetails = [
     { label: "Written", value: String(submitted.length) },
@@ -204,6 +227,68 @@ export default function Reviews() {
   }, [activeStay]);
 
   /**
+   * Loads submitted reviews and completed bookings for production routes.
+   * The backend remains responsible for final eligibility; this maps available
+   * responses into the accepted review/journal composition.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadReviews() {
+      setProductionState({ isLoading: true, error: false });
+
+      const [reviewsResult, bookingsResult] = await Promise.allSettled([
+        reviewService.getMine(),
+        bookingService.getMine(),
+      ]);
+
+      if (!isMounted) return;
+
+      const nextSubmitted =
+        reviewsResult.status === "fulfilled"
+          ? normalizeApiList(reviewsResult.value.data).map((review, index) =>
+              mapReviewToSubmitted(review, userReviewsData.submitted[index])
+            )
+          : [];
+      const nextReadyToReview =
+        bookingsResult.status === "fulfilled"
+          ? normalizeApiList(bookingsResult.value.data)
+              .filter(
+                (booking) =>
+                  String(booking?.status || "").toUpperCase() === "COMPLETED"
+              )
+              .map((booking, index) =>
+                mapBookingToReviewPrompt(
+                  booking,
+                  userReviewsData.readyToReview[index]
+                )
+              )
+          : [];
+
+      setProductionReviews({
+        readyToReview: nextReadyToReview,
+        submitted: nextSubmitted,
+      });
+      setProductionState({
+        isLoading: false,
+        error:
+          reviewsResult.status === "rejected" &&
+          bookingsResult.status === "rejected",
+      });
+    }
+
+    loadReviews();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  /**
    * Opens the local review form and clears previous validation state.
    */
   const handleOpenReview = (stay) => {
@@ -224,9 +309,10 @@ export default function Reviews() {
   };
 
   /**
-   * Validates the preview form locally and briefly shows submit state.
+   * Validates the review form locally. Preview mode shows the accepted visual
+   * submit state; production mode posts to the incoming review service.
    */
-  const handleSubmitReview = (event) => {
+  const handleSubmitReview = async (event) => {
     event.preventDefault();
 
     if (!rating) {
@@ -241,10 +327,45 @@ export default function Reviews() {
 
     setFormError("");
     setIsSubmitting(true);
-    submitTimerRef.current = window.setTimeout(() => {
-      setIsSubmitting(false);
+
+    if (previewMode) {
+      submitTimerRef.current = window.setTimeout(() => {
+        setIsSubmitting(false);
+        setActiveStay(null);
+      }, 450);
+      return;
+    }
+
+    try {
+      const response = await reviewService.create({
+        bookingId: activeStay.bookingId ?? activeStay.id,
+        propertyId: activeStay.propertyId,
+        rating,
+        comment: reviewText.trim(),
+      });
+      const submittedReview = mapReviewToSubmitted(response.data, {
+        ...activeStay,
+        rating,
+        text: reviewText.trim(),
+      });
+
+      setProductionReviews((currentReviews) => ({
+        readyToReview: currentReviews.readyToReview.filter(
+          (stay) => stay.id !== activeStay.id
+        ),
+        submitted: [submittedReview, ...currentReviews.submitted],
+      }));
       setActiveStay(null);
-    }, 450);
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+      setFormError(
+        error?.response?.data?.message ||
+          error?.response?.data ||
+          "We couldn't submit your review."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

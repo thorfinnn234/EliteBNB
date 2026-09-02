@@ -11,13 +11,15 @@ import {
   Star,
   UserRound,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import GuestAvatar from "../../components/user/GuestAvatar";
 import UserPageHeader from "../../components/user/UserPageHeader";
 import { useAuth } from "../../hooks/useAuth";
 import { useGuestAvatar } from "../../hooks/useGuestAvatar";
 import { userProfileData } from "../../data/userHomeData";
+import { userProfileService } from "../../services/userProfileService";
+import { mapUserProfile } from "../../utils/userBackendMappers";
 import "./UserHome.css";
 import "./UserPages.css";
 
@@ -26,15 +28,13 @@ import "./UserPages.css";
  * Missing backend fields use non-sensitive presentation fallbacks.
  */
 function getInitialProfile(user) {
-  const nameParts = user?.name?.split(" ") ?? [];
-
-  return {
-    firstName: user?.firstName ?? nameParts[0] ?? "",
-    lastName: user?.lastName ?? nameParts.slice(1).join(" ") ?? "",
-    email: user?.email ?? "",
-    phone: user?.phone ?? userProfileData.phone,
+  return mapUserProfile(user, {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: userProfileData.phone,
     role: user?.role ?? "USER",
-  };
+  });
 }
 
 /**
@@ -148,11 +148,11 @@ function ProfileRecommendation({ stay }) {
 
 /**
  * Replaces the Profile placeholder with a guest account view.
- * The page keeps edits local until profile-update endpoints are connected and
- * preview mode avoids writing fake identity into AuthContext or localStorage.
+ * The page keeps preview edits local, while production submits through the
+ * profile service without writing fake identity into AuthContext or storage.
  */
 export default function UserProfile({ previewMode = false, previewUser }) {
-  const { logout, user } = useAuth();
+  const { logout, setUser, user } = useAuth();
   const {
     avatarOptions,
     selectedAvatar,
@@ -163,6 +163,12 @@ export default function UserProfile({ previewMode = false, previewUser }) {
   const effectiveUser = previewUser ?? user;
   const reviewsPath = previewMode ? "/dev/user-preview/reviews" : "/user/reviews";
   const [profile, setProfile] = useState(() => getInitialProfile(effectiveUser));
+  const [profileStatus, setProfileStatus] = useState({
+    isLoading: !previewMode,
+    isSaving: false,
+    error: "",
+    success: "",
+  });
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [preferences, setPreferences] = useState(userProfileData.preferences);
@@ -175,6 +181,60 @@ export default function UserProfile({ previewMode = false, previewUser }) {
   ];
 
   /**
+   * Loads the real profile on production routes. Preview mode keeps using the
+   * injected presentation identity and never writes fake auth state.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        setProfileStatus((currentStatus) => ({
+          ...currentStatus,
+          isLoading: true,
+          error: "",
+        }));
+
+        const response = await userProfileService.getProfile();
+        const nextProfile = mapUserProfile(response.data, getInitialProfile(user));
+
+        if (isMounted) {
+          setProfile(nextProfile);
+          setProfileStatus({
+            isLoading: false,
+            isSaving: false,
+            error: "",
+            success: "",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load user profile:", error);
+
+        if (isMounted) {
+          setProfileStatus({
+            isLoading: false,
+            isSaving: false,
+            error:
+              error?.response?.data?.message ||
+              "We couldn't load your profile details.",
+            success: "",
+          });
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveUser, previewMode, user]);
+
+  /**
    * Updates local form state only. A future service call can consume this same
    * shape once backend profile persistence is available.
    */
@@ -185,6 +245,59 @@ export default function UserProfile({ previewMode = false, previewUser }) {
       ...currentProfile,
       [name]: value,
     }));
+  };
+
+  /**
+   * Persists editable profile fields through the incoming profile service in
+   * production. Preview mode closes the editor without pretending to save to a
+   * backend.
+   */
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault();
+
+    if (previewMode) {
+      setIsEditingProfile(false);
+      return;
+    }
+
+    try {
+      setProfileStatus({
+        isLoading: false,
+        isSaving: true,
+        error: "",
+        success: "",
+      });
+
+      const response = await userProfileService.updateProfile({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        phoneNumber: profile.phone,
+      });
+      const nextProfile = mapUserProfile(response.data, profile);
+
+      setProfile(nextProfile);
+      setUser?.(response.data);
+      setIsEditingProfile(false);
+      setProfileStatus({
+        isLoading: false,
+        isSaving: false,
+        error: "",
+        success: "Profile updated.",
+      });
+    } catch (error) {
+      console.error("Failed to update user profile:", error);
+
+      setProfileStatus({
+        isLoading: false,
+        isSaving: false,
+        error:
+          error?.response?.data?.message ||
+          error?.response?.data ||
+          "We couldn't update your profile.",
+        success: "",
+      });
+    }
   };
 
   /**
@@ -357,7 +470,7 @@ export default function UserProfile({ previewMode = false, previewUser }) {
           </div>
 
           {isEditingProfile ? (
-            <form className="elite-profile-form">
+            <form className="elite-profile-form" onSubmit={handleProfileSubmit}>
               <div className="elite-profile-form__grid">
                 <ProfileField
                   label="First name"
@@ -392,16 +505,33 @@ export default function UserProfile({ previewMode = false, previewUser }) {
                 <input value={profile.role} readOnly />
               </label>
 
-              <button type="button" className="elite-user-page__primary-button">
-                Save profile draft
+              {profileStatus.error ? (
+                <p role="alert">{profileStatus.error}</p>
+              ) : null}
+
+              <button
+                type="submit"
+                className="elite-user-page__primary-button"
+                disabled={profileStatus.isSaving}
+              >
+                {profileStatus.isSaving ? "Saving..." : "Save profile"}
               </button>
             </form>
           ) : (
             <div className="elite-profile-summary">
               <p>
-                Your account details stay ready for booking flows while final
-                profile persistence waits for backend integration.
+                Your account details stay ready for booking flows and profile
+                updates where the backend profile contract is available.
               </p>
+              {profileStatus.isLoading ? (
+                <p role="status">Loading your latest profile details...</p>
+              ) : null}
+              {profileStatus.error ? (
+                <p role="alert">{profileStatus.error}</p>
+              ) : null}
+              {profileStatus.success ? (
+                <p role="status">{profileStatus.success}</p>
+              ) : null}
               <dl>
                 <div>
                   <dt>Account role</dt>

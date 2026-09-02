@@ -191,9 +191,10 @@ export default function HostDashboard() {
 
   useEffect(() => {
     /**
-     * Loads the same three dashboard data sources that were already connected
-     * to the backend: aggregate Host stats, Host reservations, and Host
-     * properties. Only presentation changes happen after the data is returned.
+     * Loads the same backend-connected dashboard sources, plus the earnings
+     * endpoint introduced by the integration branch. The view still receives a
+     * single stats object so the accepted Host dashboard presentation remains
+     * unchanged.
      */
     const loadDashboard = async () => {
       try {
@@ -204,15 +205,29 @@ export default function HostDashboard() {
           dashboardResponse,
           reservationsResponse,
           listingsResponse,
+          earningsResponse,
         ] = await Promise.all([
           hostDashboardService.getDashboard(),
           bookingService.getHostReservations(),
           propertyService.getMyProperties(),
+          hostDashboardService.getEarnings(),
         ]);
+        const dashboardStats = dashboardResponse.data || {};
+        const earningsStats = earningsResponse.data || {};
 
         setStats({
           ...defaultStats,
-          ...(dashboardResponse.data || {}),
+          ...dashboardStats,
+          totalEarnings:
+            earningsStats.totalEarnings ??
+            earningsStats.totalRevenue ??
+            dashboardStats.totalEarnings ??
+            dashboardStats.totalRevenue ??
+            defaultStats.totalEarnings,
+          completedReservations:
+            dashboardStats.completedReservations ??
+            earningsStats.completedReservations ??
+            defaultStats.completedReservations,
         });
         setReservations(reservationsResponse.data || []);
         setListings(listingsResponse.data || []);

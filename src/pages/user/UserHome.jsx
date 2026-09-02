@@ -12,6 +12,16 @@ import UserSectionHeading from "../../components/user/UserSectionHeading";
 import UserStayCard from "../../components/user/UserStayCard";
 import { useAuth } from "../../hooks/useAuth";
 import { userHomeData } from "../../data/userHomeData";
+import { useEffect, useState } from "react";
+import { bookingService } from "../../services/bookingService";
+import { favoriteService } from "../../services/favoriteService";
+import { propertyService } from "../../services/propertyService";
+import {
+  mapBookingToTrip,
+  mapFavoriteToStay,
+  mapPropertyToStay,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
 import "./UserHome.css";
 
 /**
@@ -28,17 +38,163 @@ function getFirstName(user) {
 }
 
 /**
+ * Finds the first booking that still belongs in the guest's upcoming journey
+ * space. Backend status rules stay authoritative; this only groups returned
+ * data for the existing home preview card.
+ */
+function getFirstUpcomingBooking(bookings) {
+  return normalizeApiList(bookings).find((booking) => {
+    const status = String(booking?.status || "").toUpperCase();
+
+    return status !== "COMPLETED" && status !== "CANCELLED";
+  });
+}
+
+/**
+ * Builds the accepted User Home presentation shape from backend service
+ * responses. Missing endpoints become section-level errors rather than
+ * replacing the full page with fallback mock data.
+ */
+function buildProductionHome({
+  bookingsResult,
+  favoritesResult,
+  propertiesResult,
+}) {
+  const properties =
+    propertiesResult.status === "fulfilled"
+      ? normalizeApiList(propertiesResult.value.data)
+      : [];
+  const favorites =
+    favoritesResult.status === "fulfilled"
+      ? normalizeApiList(favoritesResult.value.data)
+      : [];
+  const bookings =
+    bookingsResult.status === "fulfilled"
+      ? normalizeApiList(bookingsResult.value.data)
+      : [];
+  const [leadProperty, ...supportingProperties] = properties;
+  const firstUpcomingBooking = getFirstUpcomingBooking(bookings);
+
+  return {
+    featuredStay: leadProperty
+      ? {
+          ...mapPropertyToStay(
+            leadProperty,
+            userHomeData.featuredStay,
+            userHomeData.featuredStay.variant
+          ),
+          eyebrow: userHomeData.featuredStay.eyebrow,
+          reason: userHomeData.featuredStay.reason,
+        }
+      : null,
+    recommendations: supportingProperties
+      .slice(0, userHomeData.recommendations.length)
+      .map((property, index) =>
+        mapPropertyToStay(
+          property,
+          userHomeData.recommendations[index],
+          userHomeData.recommendations[index]?.variant
+        )
+      ),
+    savedStays: favorites
+      .slice(0, userHomeData.savedStays.length)
+      .map((favorite, index) =>
+        mapFavoriteToStay(
+          favorite,
+          userHomeData.savedStays[index],
+          userHomeData.savedStays[index]?.variant
+        )
+      ),
+    upcomingTrip: firstUpcomingBooking
+      ? mapBookingToTrip(firstUpcomingBooking, userHomeData.upcomingTrip)
+      : null,
+    presentationState: {
+      isLoading: false,
+      errors: {
+        featuredStay: propertiesResult.status === "rejected",
+        recommendations: propertiesResult.status === "rejected",
+        upcomingTrip: bookingsResult.status === "rejected",
+        savedStays: favoritesResult.status === "rejected",
+      },
+    },
+  };
+}
+
+/**
  * Renders the first authenticated guest dashboard experience.
  * It combines discovery, recommendation, trip, and saved-stay modules while
  * keeping mock presentation data isolated for later API replacement.
  */
 export default function UserHome({ previewMode = false, previewUser }) {
   const { user } = useAuth();
+  const [productionHome, setProductionHome] = useState(null);
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    errors: {
+      featuredStay: false,
+      recommendations: false,
+      upcomingTrip: false,
+      savedStays: false,
+    },
+  });
   const firstName = getFirstName(previewUser ?? user);
   const greeting = firstName ? `Welcome back, ${firstName}.` : "Welcome back.";
   const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
   const savedPath = previewMode ? "/dev/user-preview/saved" : "/user/wishlist";
   const tripsPath = previewMode ? "/dev/user-preview/trips" : "/user/trips";
+  /**
+   * Production pages use the backend services that arrived from `origin/main`.
+   * Development preview mode deliberately skips those calls so visual QA stays
+   * independent of AuthContext, tokens, and a running backend.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadUserHome() {
+      setProductionState((currentState) => ({
+        ...currentState,
+        isLoading: true,
+      }));
+
+      const [propertiesResult, favoritesResult, bookingsResult] =
+        await Promise.allSettled([
+          propertyService.getAll(),
+          favoriteService.getMine(),
+          bookingService.getMine(),
+        ]);
+
+      if (!isMounted) return;
+
+      const nextHome = buildProductionHome({
+        bookingsResult,
+        favoritesResult,
+        propertiesResult,
+      });
+
+      setProductionHome(nextHome);
+      setProductionState(nextHome.presentationState);
+    }
+
+    loadUserHome();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  const homeSource =
+    previewMode || !productionHome
+      ? userHomeData
+      : {
+          ...userHomeData,
+          ...productionHome,
+          presentationState: productionState,
+        };
+
   const {
     briefing,
     discoveryShortcuts,
@@ -48,7 +204,7 @@ export default function UserHome({ previewMode = false, previewUser }) {
     recommendations,
     savedStays,
     upcomingTrip,
-  } = userHomeData;
+  } = homeSource;
 
   const { errors, isLoading } = presentationState;
 

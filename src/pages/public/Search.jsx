@@ -1,5 +1,5 @@
 import { SlidersHorizontal, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import GuestSearch from "../../components/user/GuestSearch";
 import {
@@ -9,6 +9,11 @@ import {
 import UserPageHeader from "../../components/user/UserPageHeader";
 import UserStayCard from "../../components/user/UserStayCard";
 import { userExploreData } from "../../data/userHomeData";
+import { propertyService } from "../../services/propertyService";
+import {
+  mapPropertyToStay,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
 import "../user/UserHome.css";
 import "../user/UserPages.css";
 
@@ -104,14 +109,82 @@ export default function Search({ previewMode = false }) {
   const location = useLocation();
   const [filters, setFilters] = useState(userExploreData.filterDefaults);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [productionResults, setProductionResults] = useState([]);
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    error: false,
+  });
   const [sortValue, setSortValue] = useState("recommended");
   const initialCriteria = useMemo(
     () => getInitialCriteria(location.search),
     [location.search]
   );
   const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
-  const { filterGroups, presentationState, results } = userExploreData;
-  const heroStay = results[0];
+  const { filterGroups, results } = userExploreData;
+
+  /**
+   * Loads real property results for the public discovery route. Preview mode
+   * intentionally keeps the isolated presentation data so frontend review does
+   * not depend on a running backend or auth state.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadSearchResults() {
+      try {
+        setProductionState({ isLoading: true, error: false });
+
+        const response = await propertyService.search({
+          destination: initialCriteria.destination,
+          checkIn: initialCriteria.checkIn,
+          checkOut: initialCriteria.checkOut,
+          guests: initialCriteria.guests,
+        });
+        const mappedResults = normalizeApiList(response.data).map(
+          (property, index) => {
+            const fallback =
+              userExploreData.results[index % userExploreData.results.length];
+
+            return mapPropertyToStay(property, fallback, fallback?.variant);
+          }
+        );
+
+        if (isMounted) {
+          setProductionResults(mappedResults);
+          setProductionState({ isLoading: false, error: false });
+        }
+      } catch (error) {
+        console.error("Failed to load search results:", error);
+
+        if (isMounted) {
+          setProductionResults([]);
+          setProductionState({ isLoading: false, error: true });
+        }
+      }
+    }
+
+    loadSearchResults();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    initialCriteria.checkIn,
+    initialCriteria.checkOut,
+    initialCriteria.destination,
+    initialCriteria.guests,
+    previewMode,
+  ]);
+
+  const presentationState = previewMode
+    ? userExploreData.presentationState
+    : productionState;
+  const searchResults = previewMode ? results : productionResults;
+  const heroStay = searchResults[0] ?? results[0];
   const heroDetails = [
     {
       label: "Destination",
@@ -129,10 +202,10 @@ export default function Search({ previewMode = false }) {
     },
   ];
   const visibleResults = useMemo(() => {
-    const filteredResults = filterResults(results, filters);
+    const filteredResults = filterResults(searchResults, filters);
 
     return sortResults(filteredResults, sortValue);
-  }, [filters, results, sortValue]);
+  }, [filters, searchResults, sortValue]);
 
   /**
    * Updates one select-based filter while preserving the rest of the filter

@@ -26,6 +26,7 @@ import HostDashboard from "../pages/host/HostDashboard";
 import HostListings from "../pages/host/HostListings";
 import HostMessages from "../pages/host/Messages";
 import HostNotifications from "../pages/host/Notifications";
+import HostOnboarding from "../pages/host/HostOnboarding";
 import HostProfile from "../pages/host/HostProfile";
 import HostReservations from "../pages/host/Reservations";
 import HostReviews from "../pages/host/Reviews";
@@ -34,6 +35,8 @@ import Home from "../pages/public/Home";
 import PropertyDetails from "../pages/public/PropertyDetails";
 import Search from "../pages/public/Search";
 import BookingCheckout from "../pages/user/BookingCheckout";
+import UserNotifications from "../pages/user/Notification";
+import PaymentCallback from "../pages/user/PaymentCallback";
 import UserReviews from "../pages/user/Reviews";
 import Trips from "../pages/user/Trips";
 import UserHome from "../pages/user/UserHome";
@@ -142,6 +145,14 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/verify-reset-code" element={<VerifyResetCode />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route
+        path="/payment/callback"
+        element={
+          <RoleRoute allowedRoles={["USER"]}>
+            <PaymentCallback />
+          </RoleRoute>
+        }
+      />
 
       {import.meta.env.DEV ? (
         <>
@@ -184,7 +195,7 @@ export default function AppRoutes() {
             path="/dev/user-preview/reviews"
             element={
               <DevUserPreviewPage routePath="/user/reviews">
-                <UserReviews />
+                <UserReviews previewMode />
               </DevUserPreviewPage>
             }
           />
@@ -204,14 +215,25 @@ export default function AppRoutes() {
       ) : null}
 
       <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
+      <Route path="/user/home" element={<Navigate to="/user/dashboard" replace />} />
       <Route path="/user/dashboard" element={<UserPage><UserHome /></UserPage>} />
+      <Route path="/user/property/:id" element={<UserPage><PropertyDetails /></UserPage>} />
       <Route path="/user/trips" element={<UserPage><Trips /></UserPage>} />
       <Route path="/user/wishlist" element={<UserPage><Wishlist /></UserPage>} />
       <Route path="/user/profile" element={<UserPage><UserProfile /></UserPage>} />
       <Route path="/user/booking-checkout" element={<UserPage><BookingCheckout /></UserPage>} />
       <Route path="/user/reviews" element={<UserPage><UserReviews /></UserPage>} />
+      <Route path="/user/notifications" element={<UserPage><UserNotifications /></UserPage>} />
 
       <Route path="/host" element={<Navigate to="/host/dashboard" replace />} />
+      <Route
+        path="/host/onboarding"
+        element={
+          <RoleRoute allowedRoles={["HOST"]}>
+            <HostOnboarding />
+          </RoleRoute>
+        }
+      />
       <Route path="/host/dashboard" element={<HostPage><HostDashboard /></HostPage>} />
       <Route path="/host/listings" element={<HostPage><HostListings /></HostPage>} />
       <Route path="/host/listings/new" element={<HostPage><CreateListing /></HostPage>} />
