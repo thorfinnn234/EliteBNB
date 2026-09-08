@@ -18,12 +18,18 @@ export default function PropertyCard({
   return (
     <article className="elite-property-card">
       <Link to={`/property/${id}`} className="elite-property-card__media">
-        <img
-          className="elite-property-card__image elite-property-card__image--primary"
-          src={image}
-          alt={imageAlt}
-          loading="lazy"
-        />
+        {image ? (
+          <img
+            className="elite-property-card__image elite-property-card__image--primary"
+            src={image}
+            alt={imageAlt}
+            loading="lazy"
+          />
+        ) : (
+          <span className="elite-property-card__image-placeholder">
+            Image unavailable
+          </span>
+        )}
         {hoverImage ? (
           <img
             className="elite-property-card__image elite-property-card__image--secondary"
@@ -52,15 +58,23 @@ export default function PropertyCard({
           <p className="elite-property-card__location">{location}</p>
           <h3>{name}</h3>
         </div>
-        <span className="elite-property-card__rating">
-          <Star size={15} fill="currentColor" aria-hidden="true" />
-          {rating}
-        </span>
+        {rating ? (
+          <span className="elite-property-card__rating">
+            <Star size={15} fill="currentColor" aria-hidden="true" />
+            {rating}
+          </span>
+        ) : null}
       </div>
 
       <p className="elite-property-card__price">
-        <span>{price}</span>
-        <small>/ night</small>
+        {price ? (
+          <>
+            <span>{price}</span>
+            <small>/ night</small>
+          </>
+        ) : (
+          <span>Price unavailable</span>
+        )}
       </p>
     </article>
   );

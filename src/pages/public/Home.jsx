@@ -8,7 +8,6 @@ import EliteLogo from "../../components/public/EliteLogo";
 import PropertyCard from "../../components/public/PropertyCard";
 import {
   curationPrinciples,
-  curatedProperties,
   destinations,
   escapeImages,
   homepageImages,
@@ -16,6 +15,11 @@ import {
   spotlightStay,
 } from "../../data/homepageContent";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion";
+import { propertyService } from "../../services/propertyService";
+import {
+  mapPropertyToStay,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
 import "./Home.css";
 import { useEliteHomeMotion } from "./useEliteHomeMotion";
 
@@ -343,7 +347,7 @@ function DayNightScene() {
  * Establishes the first reusable EliteBNB property-card language.
  * These are presentation-only mock listings until backend search data is wired.
  */
-function CuratedScene() {
+function CuratedScene({ properties, state }) {
   return (
     <section className="elite-home__scene elite-home__curated">
       <div data-home-reveal>
@@ -356,9 +360,17 @@ function CuratedScene() {
       </div>
 
       <div className="elite-home__property-grid" data-home-reveal>
-        {curatedProperties.map((property) => (
-          <PropertyCard key={property.id} {...property} />
-        ))}
+        {state.isLoading ? (
+          <p role="status">Loading available stays...</p>
+        ) : state.error ? (
+          <p role="alert">We couldn&apos;t load available stays right now.</p>
+        ) : properties.length ? (
+          properties.map((property) => (
+            <PropertyCard key={property.id} {...property} />
+          ))
+        ) : (
+          <p>No active stays are available right now.</p>
+        )}
       </div>
     </section>
   );
@@ -527,8 +539,56 @@ export default function Home() {
   const prefersReducedMotion = usePrefersReducedMotion();
   const [showIntro, setShowIntro] = useState(shouldShowIntro);
   const [introExiting, setIntroExiting] = useState(false);
+  const [curatedProperties, setCuratedProperties] = useState([]);
+  const [curatedState, setCuratedState] = useState({
+    isLoading: true,
+    error: false,
+  });
 
   useEliteHomeMotion(homeRef, prefersReducedMotion);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadCuratedProperties() {
+      try {
+        const response = await propertyService.getAll({ status: "ACTIVE" });
+        const activeProperties = normalizeApiList(response.data).filter(
+          (property) =>
+            property?.id != null &&
+            (!property?.status || String(property.status).toUpperCase() === "ACTIVE")
+        );
+        const mappedProperties = activeProperties.slice(0, 3).map((property) => {
+          const stay = mapPropertyToStay(property);
+
+          return {
+            ...stay,
+            price: stay.priceNumber > 0 ? stay.price : "",
+            image: stay.image || "",
+            imageAlt: stay.imageAlt || `${stay.name} property image`,
+          };
+        });
+
+        if (isMounted) {
+          setCuratedProperties(mappedProperties);
+          setCuratedState({ isLoading: false, error: false });
+        }
+      } catch (error) {
+        console.error("Failed to load homepage properties:", error);
+
+        if (isMounted) {
+          setCuratedProperties([]);
+          setCuratedState({ isLoading: false, error: true });
+        }
+      }
+    }
+
+    loadCuratedProperties();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!showIntro) return undefined;
@@ -565,7 +625,7 @@ export default function Home() {
         <PhilosophyScene />
         <DestinationsScene />
         <DayNightScene />
-        <CuratedScene />
+        <CuratedScene properties={curatedProperties} state={curatedState} />
         <StandardScene />
         <EscapeScene />
         <LifestyleScene />
