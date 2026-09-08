@@ -22,19 +22,22 @@ import "../user/UserPages.css";
  * Reads the current query string into the search form's initial display state.
  * The values remain local UI state until a backend search contract is connected.
  */
-function getInitialCriteria(search) {
+function getInitialCriteria(search, previewMode) {
   const params = new URLSearchParams(search);
+  const defaultCriteria = previewMode
+    ? userExploreData.defaultCriteria
+    : { destination: "", checkIn: "", checkOut: "", guests: "2" };
 
   return {
-    ...userExploreData.defaultCriteria,
+    ...defaultCriteria,
     destination:
       params.get("destination") ??
       params.get("category") ??
-      userExploreData.defaultCriteria.destination,
-    checkIn: params.get("checkIn") ?? userExploreData.defaultCriteria.checkIn,
+      defaultCriteria.destination,
+    checkIn: params.get("checkIn") ?? defaultCriteria.checkIn,
     checkOut:
-      params.get("checkOut") ?? userExploreData.defaultCriteria.checkOut,
-    guests: params.get("guests") ?? userExploreData.defaultCriteria.guests,
+      params.get("checkOut") ?? defaultCriteria.checkOut,
+    guests: params.get("guests") ?? defaultCriteria.guests,
   };
 }
 
@@ -131,8 +134,8 @@ export default function Search({ previewMode = false }) {
   });
   const [sortValue, setSortValue] = useState("recommended");
   const initialCriteria = useMemo(
-    () => getInitialCriteria(location.search),
-    [location.search]
+    () => getInitialCriteria(location.search, previewMode),
+    [location.search, previewMode]
   );
   const searchPath = previewMode
     ? "/dev/user-preview/explore"
