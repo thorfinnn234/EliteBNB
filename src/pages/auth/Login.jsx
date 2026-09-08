@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../services/authService";
 
@@ -38,6 +38,32 @@ function isEmailVerificationError(message) {
 }
 
 /**
+ * Accepts only same-app return paths that are appropriate for a USER session.
+ * Account-gated public actions can pass this through router state without
+ * changing default HOST, ADMIN, or normal USER login destinations.
+ */
+function getSafeUserReturnPath(state) {
+  const returnPath = typeof state?.from === "string" ? state.from : "";
+
+  if (!returnPath.startsWith("/") || returnPath.startsWith("//")) {
+    return "";
+  }
+
+  return returnPath.startsWith("/user/") ? returnPath : "";
+}
+
+/**
+ * Preserves the established role redirects while allowing USER account-gated
+ * actions to resume at the intended protected page after successful login.
+ */
+function getPostLoginDestination(role, userReturnPath) {
+  if (role === "ADMIN") return "/admin/dashboard";
+  if (role === "HOST") return "/host/dashboard";
+
+  return userReturnPath || "/user/dashboard";
+}
+
+/**
  * Renders the sign-in form and keeps successful authentication synchronized
  * with AuthContext so role-protected routes can read the logged-in user.
  */
@@ -51,6 +77,7 @@ export default function Login() {
   });
 
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   const [loading, setLoading] = useState(false);
@@ -98,13 +125,7 @@ export default function Login() {
         },
       });
 
-      if (role === "ADMIN") {
-        navigate("/admin/dashboard");
-      } else if (role === "HOST") {
-        navigate("/host/dashboard");
-      } else {
-        navigate("/user/dashboard");
-      }
+      navigate(getPostLoginDestination(role, getSafeUserReturnPath(location.state)));
     } catch (err) {
       const message = getAuthErrorMessage(err, "Login failed");
 
