@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { requestNotificationUnreadCountRefresh } from "../../hooks/useNotificationUnreadCount";
 import { conversationService } from "../../services/conversationService";
 import { normalizeApiList } from "../../utils/userBackendMappers";
 import "./UserMessages.css";
@@ -139,6 +140,13 @@ export default function Messages() {
       setConversation(nextConversation);
       setMessages(response.data?.messages ?? []);
       await conversationService.markRead(conversationId);
+      /*
+       * NotificationResponse currently does not expose conversation/message IDs.
+       * After the real conversation read endpoint succeeds, ask shells to refetch
+       * unread notification counts instead of guessing which notification maps
+       * to this thread from display text.
+       */
+      requestNotificationUnreadCountRefresh();
       setConversations((current) =>
         current.map((item) =>
           String(item.id) === String(conversationId)

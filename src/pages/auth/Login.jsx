@@ -5,7 +5,6 @@ import { useAuth } from "../../hooks/useAuth";
 import { authService } from "../../services/authService";
 
 import AuthLayout from "../../components/auth/AuthLayout";
-import GoogleIcon from "../../components/auth/GoogleIcon";
 
 /**
  * Extracts backend auth errors into a string safe for UI rendering.
@@ -157,20 +156,6 @@ export default function Login() {
             Sign in to continue discovering exceptional places selected with
             care.
           </p>
-        </div>
-
-        <div className="elite-auth-form__access-options">
-          <button
-            type="button"
-            className="elite-auth-form__google"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          <div className="elite-auth-form__divider">
-            <span>OR</span>
-          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="elite-auth-form__fields">

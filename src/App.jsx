@@ -9,11 +9,16 @@ import AppRoutes from "./routes/AppRoutes";
  * `window.scrollTo` calls.
  */
 function RouteScrollReset() {
-  const { pathname, search } = useLocation();
+  const { pathname } = useLocation();
 
   useEffect(() => {
+    /*
+     * Only pathname changes reset the page. Query-only navigation is used by
+     * inbox routes such as `/user/messages?conversation=1`, where resetting
+     * scroll would interrupt the active thread instead of opening a new page.
+     */
     window.scrollTo({ left: 0, top: 0, behavior: "auto" });
-  }, [pathname, search]);
+  }, [pathname]);
 
   return null;
 }

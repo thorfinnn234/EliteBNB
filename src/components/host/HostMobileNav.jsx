@@ -34,6 +34,7 @@ function isHostRouteActive(pathname, destination) {
 function HostMobileNavAction({
   item,
   activePath,
+  notificationUnreadCount,
   previewMode,
   onPreviewSelect,
   onCloseMore,
@@ -41,9 +42,18 @@ function HostMobileNavAction({
   const Icon = item.icon;
   const active = isHostRouteActive(activePath, item.to);
   const className = `elite-host-mobile-nav__item ${active ? "is-active" : ""}`;
+  const showNotificationBadge =
+    item.to === "/host/notifications" && notificationUnreadCount > 0;
   const content = (
     <>
-      <Icon size={19} strokeWidth={1.9} aria-hidden="true" />
+      <span className="elite-host-mobile-nav__icon">
+        <Icon size={19} strokeWidth={1.9} aria-hidden="true" />
+        {showNotificationBadge ? (
+          <span className="elite-host-mobile-nav__badge" aria-hidden="true">
+            {notificationUnreadCount > 9 ? "9+" : notificationUnreadCount}
+          </span>
+        ) : null}
+      </span>
       <span>{item.label}</span>
     </>
   );
@@ -84,6 +94,7 @@ function HostMobileNavAction({
  * small widths while all real routes remain protected.
  */
 export default function HostMobileNav({
+  notificationUnreadCount = 0,
   previewMode = false,
   activePath,
   onPreviewSelect,
@@ -159,6 +170,7 @@ export default function HostMobileNav({
                 key={item.to}
                 item={item}
                 activePath={currentPath}
+                notificationUnreadCount={notificationUnreadCount}
                 previewMode={previewMode}
                 onPreviewSelect={onPreviewSelect}
                 onCloseMore={closeMorePanel}
@@ -186,6 +198,7 @@ export default function HostMobileNav({
             key={item.to}
             item={item}
             activePath={currentPath}
+            notificationUnreadCount={notificationUnreadCount}
             previewMode={previewMode}
             onPreviewSelect={onPreviewSelect}
             onCloseMore={closeMorePanel}
@@ -203,7 +216,14 @@ export default function HostMobileNav({
             )
           }
         >
-          <MoreHorizontal size={20} strokeWidth={1.9} aria-hidden="true" />
+          <span className="elite-host-mobile-nav__icon">
+            <MoreHorizontal size={20} strokeWidth={1.9} aria-hidden="true" />
+            {notificationUnreadCount > 0 ? (
+              <span className="elite-host-mobile-nav__badge" aria-hidden="true">
+                {notificationUnreadCount > 9 ? "9+" : notificationUnreadCount}
+              </span>
+            ) : null}
+          </span>
           <span>More</span>
         </button>
       </div>

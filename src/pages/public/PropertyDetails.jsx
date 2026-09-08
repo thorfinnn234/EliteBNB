@@ -32,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { bookingService } from "../../services/bookingService";
 import { conversationService } from "../../services/conversationService";
 import { favoriteService } from "../../services/favoriteService";
@@ -346,6 +347,8 @@ export default function PropertyDetails() {
   });
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState("");
+
+  useBodyScrollLock(Boolean(authPrompt) || reviewDialog.isOpen);
 
   /**
    * Loads the real PropertyResponse by route ID. Favorite and review requests

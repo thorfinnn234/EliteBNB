@@ -80,6 +80,7 @@ function getPageContext(pathname) {
  */
 export default function HostTopbar({
   displayName,
+  notificationUnreadCount = 0,
   profileImageUrl,
   profileMenuOpen = false,
   profileButtonRef,
@@ -93,6 +94,10 @@ export default function HostTopbar({
   const pageContext = getPageContext(activePath || location.pathname);
   const initial = displayName?.charAt(0)?.toUpperCase() || "H";
   const handleNavigate = onNavigate || navigate;
+  const hasUnreadNotifications = notificationUnreadCount > 0;
+  const notificationLabel = hasUnreadNotifications
+    ? `Open host notifications, ${notificationUnreadCount} unread`
+    : "Open host notifications";
 
   return (
     <header className="elite-host-topbar">
@@ -128,10 +133,14 @@ export default function HostTopbar({
           type="button"
           className="elite-host-topbar__icon-button"
           onClick={() => handleNavigate("/host/notifications")}
-          aria-label="Open host notifications"
+          aria-label={notificationLabel}
         >
           <Bell size={18} strokeWidth={1.9} />
-          <span className="elite-host-topbar__pulse" aria-hidden="true" />
+          {hasUnreadNotifications ? (
+            <span className="elite-host-topbar__unread-badge" aria-hidden="true">
+              {notificationUnreadCount > 9 ? "9+" : notificationUnreadCount}
+            </span>
+          ) : null}
         </button>
 
         <button

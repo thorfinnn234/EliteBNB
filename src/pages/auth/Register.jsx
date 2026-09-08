@@ -3,7 +3,6 @@ import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import registerVisualImage from "../../assets/home/story-coastal-dusk.jpg";
 import AuthLayout from "../../components/auth/AuthLayout";
-import GoogleIcon from "../../components/auth/GoogleIcon";
 import { authService } from "../../services/authService";
 
 /**
@@ -83,20 +82,6 @@ export default function Register() {
             Create your account to save remarkable residences and continue
             booking with confidence.
           </p>
-        </div>
-
-        <div className="elite-auth-form__access-options">
-          <button
-            type="button"
-            className="elite-auth-form__google"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </button>
-
-          <div className="elite-auth-form__divider">
-            <span>OR</span>
-          </div>
         </div>
 
         {error ? (

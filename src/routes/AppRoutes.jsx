@@ -34,7 +34,6 @@ import HostSettings from "../pages/host/Settings";
 import Home from "../pages/public/Home";
 import PropertyDetails from "../pages/public/PropertyDetails";
 import Search from "../pages/public/Search";
-import BookingCheckout from "../pages/user/BookingCheckout";
 import UserNotifications from "../pages/user/Notification";
 import UserMessages from "../pages/user/Messages";
 import PaymentCallback from "../pages/user/PaymentCallback";
@@ -226,7 +225,6 @@ export default function AppRoutes() {
       <Route path="/user/trips/:bookingId" element={<UserPage><ReservationDetails /></UserPage>} />
       <Route path="/user/wishlist" element={<UserPage><Wishlist /></UserPage>} />
       <Route path="/user/profile" element={<UserPage><UserProfile /></UserPage>} />
-      <Route path="/user/booking-checkout" element={<UserPage><BookingCheckout /></UserPage>} />
       <Route path="/user/reviews" element={<UserPage><UserReviews /></UserPage>} />
       <Route path="/user/notifications" element={<UserPage><UserNotifications /></UserPage>} />
 

@@ -426,12 +426,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
   width: 2.55rem;
   height: 2.55rem;
   border: 1px solid rgba(23, 37, 84, 0.12);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.64);
   color: var(--user-navy);
+  text-decoration: none;
   transition:
     background-color 180ms ease,
     border-color 180ms ease,
@@ -448,6 +450,28 @@
 
 .elite-user-icon-button:active {
   transform: translateY(0) scale(0.98);
+}
+
+/* The badge appears only after the backend reports unread notifications. That
+   keeps the bell from implying activity when the guest is already caught up. */
+.elite-user-icon-button__badge {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.18rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding-inline: 0.22rem;
+  border: 2px solid rgba(255, 255, 255, 0.94);
+  border-radius: 999px;
+  background: var(--user-gold);
+  color: var(--user-navy);
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 10px 24px rgba(23, 37, 84, 0.16);
 }
 
 .elite-user-topbar__profile {

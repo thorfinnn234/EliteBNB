@@ -5,6 +5,7 @@ import HostMobileNav from "../components/host/HostMobileNav";
 import HostSidebar from "../components/host/HostSidebar";
 import HostTopbar from "../components/host/HostTopbar";
 import { useAuth } from "../hooks/useAuth";
+import { useNotificationUnreadCount } from "../hooks/useNotificationUnreadCount";
 import { hostProfileService } from "../services/hostProfileService";
 
 export default function HostLayout({ children }) {
@@ -16,6 +17,7 @@ export default function HostLayout({ children }) {
   const navigate = useNavigate();
   const auth = useAuth();
   const currentUser = auth?.user;
+  const { unreadCount: notificationUnreadCount } = useNotificationUnreadCount();
   const headerUser = {
     ...currentUser,
     ...hostProfile,
@@ -127,6 +129,7 @@ export default function HostLayout({ children }) {
       {/* Sidebar */}
       <HostSidebar
         open={sidebarOpen}
+        notificationUnreadCount={notificationUnreadCount}
         onClose={() => setSidebarOpen(false)}
         onLogout={handleLogout}
       />
@@ -137,6 +140,7 @@ export default function HostLayout({ children }) {
         <div className="elite-host-shell__topbar">
           <HostTopbar
             displayName={displayName}
+            notificationUnreadCount={notificationUnreadCount}
             profileImageUrl={profileImageUrl}
             profileButtonRef={profileButtonRef}
             profileMenuOpen={profileMenuOpen}
@@ -221,7 +225,10 @@ export default function HostLayout({ children }) {
           {children}
         </main>
 
-        <HostMobileNav onLogout={handleLogout} />
+        <HostMobileNav
+          notificationUnreadCount={notificationUnreadCount}
+          onLogout={handleLogout}
+        />
       </div>
     </div>
   );

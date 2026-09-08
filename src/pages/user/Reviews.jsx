@@ -8,6 +8,7 @@ import {
 } from "../../components/user/UserFeedbackStates";
 import UserPageHeader from "../../components/user/UserPageHeader";
 import { userReviewsData } from "../../data/userHomeData";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { bookingService } from "../../services/bookingService";
 import { reviewService } from "../../services/reviewService";
 import {
@@ -199,6 +200,8 @@ export default function Reviews({ previewMode = false }) {
     { label: "Ready", value: String(readyToReview.length) },
     { label: "Tone", value: "Travel journal" },
   ];
+
+  useBodyScrollLock(Boolean(activeStay));
 
   /**
    * Removes any pending preview submit timer when the page unmounts.

@@ -262,6 +262,34 @@
   text-transform: uppercase;
 }
 
+.elite-host-sidebar__copy {
+  min-inline-size: 0;
+}
+
+.elite-host-sidebar__label-row {
+  align-items: center;
+  display: flex;
+  gap: 0.45rem;
+  min-inline-size: 0;
+}
+
+/* Sidebar and mobile notification badges share the same truthful rule: they
+   render only when the backend unread-count endpoint reports work to review. */
+.elite-host-nav-badge {
+  align-items: center;
+  background: var(--host-gold);
+  border-radius: 999px;
+  color: var(--host-navy);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 0.58rem;
+  font-weight: 900;
+  justify-content: center;
+  min-block-size: 1rem;
+  min-inline-size: 1rem;
+  padding-inline: 0.25rem;
+}
+
 .elite-host-sidebar__footer {
   border-top: 1px solid rgba(255, 255, 255, 0.11);
   margin-block-start: auto;
@@ -364,13 +392,23 @@
   justify-content: flex-end;
 }
 
-.elite-host-topbar__pulse {
+/* The notification badge is rendered only from the real unread count; a zero
+   count must not show any visual "new activity" signal. */
+.elite-host-topbar__unread-badge {
+  align-items: center;
   background: var(--host-gold);
   border: 2px solid #ffffff;
   border-radius: 999px;
-  block-size: 0.62rem;
-  inline-size: 0.62rem;
-  inset: 0.58rem 0.58rem auto auto;
+  box-shadow: 0 10px 22px rgba(5, 11, 29, 0.16);
+  color: var(--host-navy);
+  display: inline-flex;
+  font-size: 0.6rem;
+  font-weight: 900;
+  inset: 0.35rem 0.28rem auto auto;
+  justify-content: center;
+  min-block-size: 1rem;
+  min-inline-size: 1rem;
+  padding-inline: 0.22rem;
   position: absolute;
 }
 
@@ -634,6 +672,31 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .elite-host-mobile-nav__icon {
+    display: inline-flex;
+    overflow: visible !important;
+    position: relative;
+  }
+
+  .elite-host-mobile-nav__badge {
+    align-items: center;
+    background: #d4a72c;
+    border: 2px solid #ffffff;
+    border-radius: 999px;
+    color: #172554;
+    display: inline-flex;
+    font-size: 0.55rem;
+    font-weight: 900;
+    justify-content: center;
+    min-block-size: 0.95rem;
+    min-inline-size: 0.95rem;
+    overflow: visible !important;
+    padding-inline: 0.2rem;
+    position: absolute;
+    right: -0.55rem;
+    top: -0.45rem;
   }
 
   .elite-host-mobile-nav__item:hover,

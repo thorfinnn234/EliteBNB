@@ -19,6 +19,7 @@ import {
   ContentSkeleton,
   SectionErrorState,
 } from "../../components/user/UserFeedbackStates";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { bookingService } from "../../services/bookingService";
 import { conversationService } from "../../services/conversationService";
 import { propertyService } from "../../services/propertyService";
@@ -186,7 +187,6 @@ function ReservationFact({ icon: Icon, label, value }) {
 }
 
 /**
-/**
  * Confirms pending cancellation on the details page. This mirrors the Trips
  * list behavior: cancellation is a status transition, never a local deletion.
  */
@@ -267,6 +267,8 @@ export default function ReservationDetails() {
   const [cancelPanelOpen, setCancelPanelOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
+
+  useBodyScrollLock(cancelPanelOpen);
 
   /**
    * Loads the user's own bookings, verifies the requested ID is present, then

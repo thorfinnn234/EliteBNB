@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
 import { useGuestAvatar } from "../../hooks/useGuestAvatar";
+import { useNotificationUnreadCount } from "../../hooks/useNotificationUnreadCount";
 import EliteLogo from "../public/EliteLogo";
 import GuestAvatar from "./GuestAvatar";
 import "./UserShell.css";
@@ -97,7 +98,6 @@ const routeLabels = {
   "/user/reviews": "Reviews",
   "/user/notifications": "Notifications",
   "/user/profile": "Profile",
-  "/user/booking-checkout": "Checkout",
 };
 
 /**
@@ -352,11 +352,18 @@ function UserTopbar({
   displayName,
   homeTo,
   initials,
+  notificationUnreadCount,
+  notificationsTo,
   profileImageUrl,
   profileTo,
   routeLabel,
   searchTo,
 }) {
+  const hasUnreadNotifications = notificationUnreadCount > 0;
+  const notificationLabel = hasUnreadNotifications
+    ? `View notifications, ${notificationUnreadCount} unread`
+    : "View notifications";
+
   return (
     <header className="elite-user-topbar">
       <Link to={homeTo} className="elite-user-topbar__brand">
@@ -380,13 +387,18 @@ function UserTopbar({
           <Search size={17} aria-hidden="true" />
           <span>Explore</span>
         </Link>
-        <button
-          type="button"
-          className="elite-user-icon-button"
-          aria-label="View notifications"
+        <Link
+          to={notificationsTo}
+          className="elite-user-icon-button elite-user-icon-button--notifications"
+          aria-label={notificationLabel}
         >
           <Bell size={18} aria-hidden="true" />
-        </button>
+          {hasUnreadNotifications ? (
+            <span className="elite-user-icon-button__badge" aria-hidden="true">
+              {notificationUnreadCount > 9 ? "9+" : notificationUnreadCount}
+            </span>
+          ) : null}
+        </Link>
         <Link to={profileTo} className="elite-user-topbar__profile">
           <GuestAvatar
             avatarId={avatarId}
@@ -456,6 +468,8 @@ export default function UserShell({
 }) {
   const { logout, user } = useAuth();
   const { selectedAvatarId } = useGuestAvatar();
+  const { unreadCount: notificationUnreadCount } =
+    useNotificationUnreadCount({ enabled: !previewMode });
   const navigate = useNavigate();
   const location = useLocation();
   const contentRef = useRef(null);
@@ -482,6 +496,7 @@ export default function UserShell({
   const homeTo = previewMode ? "/dev/user-preview" : "/user/dashboard";
   const profileTo = previewMode ? "/dev/user-preview/profile" : "/user/profile";
   const searchTo = previewMode ? "/dev/user-preview/explore" : "/user/explore";
+  const notificationsTo = previewMode ? "/dev/user-preview" : "/user/notifications";
   const shouldRenderDockMinimized =
     isDockCollapsedByScroll && !isDockRestoredByIntent;
 
@@ -763,6 +778,8 @@ export default function UserShell({
           displayName={displayName}
           homeTo={homeTo}
           initials={initials}
+          notificationUnreadCount={notificationUnreadCount}
+          notificationsTo={notificationsTo}
           profileImageUrl={profileImageUrl}
           profileTo={profileTo}
           routeLabel={routeLabel}

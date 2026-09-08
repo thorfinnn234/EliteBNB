@@ -19,6 +19,20 @@
     letter-spacing: 0;
   }
 
+  /*
+   * Native selects keep browser accessibility while sharing one comfortable
+   * chevron inset. Auth selects own a custom icon wrapper, so they are excluded
+   * to avoid double arrows.
+   */
+  select:not([multiple]):not([size]):not(.elite-auth-form__select) {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 7.5L10 12.5L15 7.5' stroke='%23172554' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-position: right 1rem center;
+    background-repeat: no-repeat;
+    background-size: 1rem;
+    padding-right: 2.85rem;
+  }
+
   h1,
   h2,
   h3,

@@ -1,6 +1,7 @@
 import { ArrowLeft, CheckCheck, Clock3, MessageSquare, Send } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { requestNotificationUnreadCountRefresh } from "../../hooks/useNotificationUnreadCount";
 import { conversationService } from "../../services/conversationService";
 import { normalizeApiList } from "../../utils/userBackendMappers";
 
@@ -84,6 +85,12 @@ export default function Messages() {
       setConversation(response.data?.conversation ?? response.data);
       setMessages(response.data?.messages ?? []);
       await conversationService.markRead(conversationId);
+      /*
+       * Message notification rows do not include conversation/message IDs today.
+       * Once the backend confirms this conversation is read, refetch the genuine
+       * notification count rather than fabricating a local cross-resource sync.
+       */
+      requestNotificationUnreadCountRefresh();
       setConversations((current) =>
         current.map((item) =>
           String(item.id) === String(conversationId)

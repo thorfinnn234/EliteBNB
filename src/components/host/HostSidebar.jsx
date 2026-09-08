@@ -18,6 +18,7 @@ import "./HostShell.css";
  */
 export default function HostSidebar({
   open = false,
+  notificationUnreadCount = 0,
   previewMode = false,
   activePath = "/host/dashboard",
   onClose,
@@ -54,6 +55,7 @@ export default function HostSidebar({
       <nav className="elite-host-sidebar__nav" aria-label="Host workspace">
         <HostNavGroup
           items={primaryHostNavItems}
+          notificationUnreadCount={notificationUnreadCount}
           previewMode={previewMode}
           activePath={activePath}
           onSelect={onClose}
@@ -64,6 +66,7 @@ export default function HostSidebar({
 
         <HostNavGroup
           items={secondaryHostNavItems}
+          notificationUnreadCount={notificationUnreadCount}
           previewMode={previewMode}
           activePath={activePath}
           onSelect={onClose}
@@ -91,6 +94,7 @@ export default function HostSidebar({
  */
 function HostNavGroup({
   items,
+  notificationUnreadCount,
   previewMode,
   activePath,
   onSelect,
@@ -112,7 +116,11 @@ function HostNavGroup({
           }}
           className={`elite-host-sidebar__link ${active ? "is-active" : ""}`}
         >
-          <HostNavItemContent item={item} Icon={Icon} />
+          <HostNavItemContent
+            item={item}
+            Icon={Icon}
+            notificationUnreadCount={notificationUnreadCount}
+          />
         </button>
       );
     }
@@ -126,7 +134,11 @@ function HostNavGroup({
           `elite-host-sidebar__link ${isActive ? "is-active" : ""}`
         }
       >
-        <HostNavItemContent item={item} Icon={Icon} />
+        <HostNavItemContent
+          item={item}
+          Icon={Icon}
+          notificationUnreadCount={notificationUnreadCount}
+        />
       </NavLink>
     );
   });
@@ -136,15 +148,25 @@ function HostNavGroup({
  * Keeps Host nav item contents shared between real links and preview buttons
  * so the visual treatment stays identical in both contexts.
  */
-function HostNavItemContent({ item, Icon }) {
+function HostNavItemContent({ item, Icon, notificationUnreadCount }) {
+  const showNotificationBadge =
+    item.to === "/host/notifications" && notificationUnreadCount > 0;
+
   return (
     <>
       <span className="elite-host-sidebar__icon" aria-hidden="true">
         <Icon size={18} strokeWidth={1.9} />
       </span>
 
-      <span>
-        <span className="elite-host-sidebar__label">{item.label}</span>
+      <span className="elite-host-sidebar__copy">
+        <span className="elite-host-sidebar__label-row">
+          <span className="elite-host-sidebar__label">{item.label}</span>
+          {showNotificationBadge ? (
+            <span className="elite-host-nav-badge" aria-hidden="true">
+              {notificationUnreadCount > 9 ? "9+" : notificationUnreadCount}
+            </span>
+          ) : null}
+        </span>
         <span className="elite-host-sidebar__meta">{item.meta}</span>
       </span>
     </>

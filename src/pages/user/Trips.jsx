@@ -17,6 +17,7 @@ import {
 import UserPageHeader from "../../components/user/UserPageHeader";
 import UserStatusTabs from "../../components/user/UserStatusTabs";
 import { userTripsData } from "../../data/userHomeData";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { bookingService } from "../../services/bookingService";
 import { propertyService } from "../../services/propertyService";
 import { groupTripsByStatus } from "../../utils/userBackendMappers";
@@ -240,6 +241,8 @@ export default function Trips({ previewMode = false }) {
   const [cancelError, setCancelError] = useState("");
   const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const { emptyStates, tabs } = userTripsData;
+
+  useBodyScrollLock(Boolean(cancelDialogTrip));
 
   /**
    * Loads authenticated bookings only for production USER routes. Preview

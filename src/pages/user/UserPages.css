@@ -557,14 +557,17 @@
   opacity: 0.68;
 }
 
+/* USER modals stay fixed to the current viewport and scroll inside their own
+   panels so actions remain visible without forcing a page-level scroll reset. */
 .elite-trip-cancel-modal,
 .elite-reservation-modal {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 120;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
   padding: 1rem;
   background: rgba(5, 11, 29, 0.58);
 }
@@ -572,6 +575,8 @@
 .elite-trip-cancel-modal__panel {
   position: relative;
   width: min(100%, 31rem);
+  max-block-size: min(36rem, 90dvh);
+  overflow-y: auto;
   border: 1px solid rgba(250, 249, 246, 0.52);
   border-radius: 1.5rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 249, 246, 0.98));
@@ -864,9 +869,10 @@
 .elite-review-modal {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 120;
   display: grid;
   place-items: center;
+  overflow-y: auto;
   padding: 1rem;
   background: rgba(17, 24, 39, 0.46);
   backdrop-filter: blur(12px);
@@ -875,6 +881,8 @@
 .elite-review-modal__panel {
   position: relative;
   width: min(100%, 34rem);
+  max-block-size: min(42rem, 90dvh);
+  overflow-y: auto;
   padding: clamp(1.2rem, 3vw, 2rem);
 }
 
@@ -5186,10 +5194,11 @@ for ownership, then hydrated property data for imagery and stay facts.
 .elite-reservation-modal {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 120;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
   padding: 1rem;
   background: rgba(5, 11, 29, 0.58);
 }
@@ -5197,6 +5206,8 @@ for ownership, then hydrated property data for imagery and stay facts.
 .elite-reservation-modal__panel {
   position: relative;
   width: min(100%, 31rem);
+  max-block-size: min(36rem, 90dvh);
+  overflow-y: auto;
   border: 1px solid rgba(250, 249, 246, 0.52);
   border-radius: 1.5rem;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 249, 246, 0.98));

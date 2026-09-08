@@ -201,6 +201,7 @@ export default function HostPreview() {
 
       <HostSidebar
         open={sidebarOpen}
+        notificationUnreadCount={0}
         previewMode
         activePath={previewPath}
         onClose={() => setSidebarOpen(false)}
@@ -212,6 +213,7 @@ export default function HostPreview() {
         <div className="elite-host-shell__topbar">
           <HostTopbar
             displayName={displayName}
+            notificationUnreadCount={0}
             profileButtonRef={profileButtonRef}
             profileMenuOpen={profileMenuOpen}
             activePath={previewPath}
@@ -293,6 +295,7 @@ export default function HostPreview() {
         <HostMobileNav
           previewMode
           activePath={previewPath}
+          notificationUnreadCount={0}
           onPreviewSelect={(item) => handlePreviewNavigate(item.to)}
           onLogout={() => handlePreviewNavigate("/host/dashboard")}
         />
