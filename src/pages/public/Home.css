@@ -1148,7 +1148,7 @@
 .elite-home__escape {
   background: #faf9f6;
   min-block-size: 100vh;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .elite-home__escape-stage {
@@ -1164,7 +1164,7 @@
   max-inline-size: 48rem;
   position: relative;
   text-align: center;
-  z-index: 3;
+  z-index: 6;
 }
 
 .elite-home__escape-copy h2 {
@@ -1190,6 +1190,8 @@
   border-radius: 8px;
   margin: 0;
   position: absolute;
+  transform-origin: center center;
+  will-change: transform, opacity;
   z-index: 1;
 }
 
@@ -1315,6 +1317,19 @@
   left: 22vw;
   top: 58vh;
   z-index: 3;
+}
+
+@media (min-width: 1024px) {
+  .elite-home__escape {
+    block-size: clamp(70rem, 176vh, 112rem);
+  }
+
+  .elite-home__escape-stage {
+    block-size: 100vh;
+    min-block-size: 100vh;
+    position: sticky;
+    top: 0;
+  }
 }
 
 .elite-home__lifestyle {
@@ -1771,6 +1786,7 @@
     inline-size: 100%;
     position: relative;
     inset: auto;
+    transform: none;
   }
 
   .elite-home__escape-photo--seven,
@@ -2120,6 +2136,26 @@
   .elite-home__daynight-media {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .elite-home__escape {
+    block-size: auto;
+  }
+
+  .elite-home__escape-stage {
+    block-size: auto;
+    min-block-size: auto;
+    position: relative;
+    row-gap: 1.25rem;
+    top: auto;
+  }
+
+  .elite-home__escape-photo {
+    will-change: auto;
+  }
+
+  .elite-home__escape-copy--second {
+    position: relative;
   }
 
   .elite-home__daynight-copy,
