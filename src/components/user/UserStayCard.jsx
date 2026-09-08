@@ -26,7 +26,15 @@ function getStayCardVariant(variant) {
  * stays, and future search surfaces. It mirrors the public card vocabulary
  * while staying compact enough for product workflows.
  */
-export default function UserStayCard({ stay, compact = false, variant }) {
+export default function UserStayCard({
+  favoriteLoading = false,
+  isSaved = false,
+  onToggleFavorite,
+  propertyPath = "/property",
+  stay,
+  compact = false,
+  variant,
+}) {
   const visualVariant = getStayCardVariant(variant ?? stay.variant);
 
   return (
@@ -35,7 +43,7 @@ export default function UserStayCard({ stay, compact = false, variant }) {
         compact ? " is-compact" : ""
       }`}
     >
-      <Link to={`/property/${stay.id}`} className="elite-user-stay-card__media">
+      <Link to={`${propertyPath}/${stay.id}`} className="elite-user-stay-card__media">
         <img src={stay.image} alt={stay.imageAlt} loading="lazy" />
         <span className="elite-user-stay-card__overlay" aria-hidden="true" />
         <span className="elite-user-stay-card__action">
@@ -47,9 +55,18 @@ export default function UserStayCard({ stay, compact = false, variant }) {
       <button
         type="button"
         className="elite-user-stay-card__save"
-        aria-label={`Save ${stay.name} to wishlist`}
+        aria-label={`${isSaved ? "Remove" : "Save"} ${stay.name} ${
+          isSaved ? "from" : "to"
+        } wishlist`}
+        aria-pressed={isSaved}
+        disabled={favoriteLoading}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggleFavorite?.(stay);
+        }}
       >
-        <Heart size={17} aria-hidden="true" />
+        <Heart size={17} fill={isSaved ? "currentColor" : "none"} aria-hidden="true" />
       </button>
 
       <div className="elite-user-stay-card__body">

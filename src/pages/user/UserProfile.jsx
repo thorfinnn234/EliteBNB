@@ -19,7 +19,11 @@ import { useAuth } from "../../hooks/useAuth";
 import { useGuestAvatar } from "../../hooks/useGuestAvatar";
 import { userProfileData } from "../../data/userHomeData";
 import { userProfileService } from "../../services/userProfileService";
+import { bookingService } from "../../services/bookingService";
+import { favoriteService } from "../../services/favoriteService";
+import { reviewService } from "../../services/reviewService";
 import { mapUserProfile } from "../../utils/userBackendMappers";
+import { normalizeApiList } from "../../utils/userBackendMappers";
 import "./UserHome.css";
 import "./UserPages.css";
 
@@ -32,7 +36,7 @@ function getInitialProfile(user) {
     firstName: "",
     lastName: "",
     email: "",
-    phone: userProfileData.phone,
+    phone: "",
     role: user?.role ?? "USER",
   });
 }
@@ -100,11 +104,11 @@ function PreferenceToggle({ description, enabled, label, onToggle }) {
  * It uses existing property-route links and mock display data without claiming
  * a backend recommendation algorithm exists yet.
  */
-function ProfileRecommendation({ stay }) {
+function ProfileRecommendation({ propertyPath = "/user/property", stay }) {
   return (
     <section className="elite-profile-recommendation" data-user-page-reveal>
       <Link
-        to={`/property/${stay.id}`}
+        to={`${propertyPath}/${stay.id}`}
         className="elite-profile-recommendation__media"
       >
         <img src={stay.image} alt={stay.imageAlt} loading="lazy" />
@@ -132,7 +136,7 @@ function ProfileRecommendation({ stay }) {
           </strong>
         </div>
         <div className="elite-profile-recommendation__actions">
-          <Link to={`/property/${stay.id}`}>
+          <Link to={`${propertyPath}/${stay.id}`}>
             View stay
             <ArrowRight size={15} aria-hidden="true" />
           </Link>
@@ -172,6 +176,11 @@ export default function UserProfile({ previewMode = false, previewUser }) {
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [preferences, setPreferences] = useState(userProfileData.preferences);
+  const [profileStats, setProfileStats] = useState({
+    savedStays: 0,
+    trips: 0,
+    reviews: 0,
+  });
   const displayName = getProfileDisplayName(profile);
   const initials = getProfileInitials(displayName) || "EB";
   const heroDetails = [
@@ -179,6 +188,13 @@ export default function UserProfile({ previewMode = false, previewUser }) {
     { label: "Account", value: userProfileData.accountRoleLabel },
     { label: "Avatar", value: selectedAvatar.label },
   ];
+  const identityStats = previewMode
+    ? userProfileData.identityStats
+    : [
+        { label: "Saved stays", value: profileStats.savedStays },
+        { label: "Trips", value: profileStats.trips },
+        { label: "Reviews", value: profileStats.reviews },
+      ];
 
   /**
    * Loads the real profile on production routes. Preview mode keeps using the
@@ -233,6 +249,41 @@ export default function UserProfile({ previewMode = false, previewUser }) {
       isMounted = false;
     };
   }, [effectiveUser, previewMode, user]);
+
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    Promise.allSettled([
+      favoriteService.getMine(),
+      bookingService.getMine(),
+      reviewService.getMine(),
+    ]).then(([favoritesResult, bookingsResult, reviewsResult]) => {
+      if (!isMounted) return;
+
+      setProfileStats({
+        savedStays:
+          favoritesResult.status === "fulfilled"
+            ? normalizeApiList(favoritesResult.value.data).length
+            : 0,
+        trips:
+          bookingsResult.status === "fulfilled"
+            ? normalizeApiList(bookingsResult.value.data).length
+            : 0,
+        reviews:
+          reviewsResult.status === "fulfilled"
+            ? normalizeApiList(reviewsResult.value.data).length
+            : 0,
+      });
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
 
   /**
    * Updates local form state only. A future service call can consume this same
@@ -406,7 +457,9 @@ export default function UserProfile({ previewMode = false, previewUser }) {
           ) : null}
 
           <p className="elite-avatar-picker__note">
-            Frontend preview only. Account avatars will need backend support.
+            {previewMode
+              ? "Frontend preview only. Account avatars will need backend support."
+              : "Avatar selection is stored on this device."}
           </p>
         </div>
         <div className="elite-profile-identity__copy">
@@ -436,9 +489,9 @@ export default function UserProfile({ previewMode = false, previewUser }) {
         </dl>
         <dl
           className="elite-profile-identity__stats"
-          aria-label="Preview guest travel identity summary"
+          aria-label="Guest travel identity summary"
         >
-          {userProfileData.identityStats.map((stat) => (
+          {identityStats.map((stat) => (
             <div key={stat.label}>
               <dt>{stat.label}</dt>
               <dd>{stat.value}</dd>
@@ -538,12 +591,22 @@ export default function UserProfile({ previewMode = false, previewUser }) {
                   <dd>{userProfileData.accountRoleLabel}</dd>
                 </div>
                 <div>
-                  <dt>Preferred tone</dt>
-                  <dd>Waterfront, quiet arrival, design-led stays</dd>
+                  <dt>{previewMode ? "Preferred tone" : "Preferences"}</dt>
+                  <dd>
+                    {previewMode
+                      ? "Waterfront, quiet arrival, design-led stays"
+                      : "Stored on this device"}
+                  </dd>
                 </div>
                 <div>
                   <dt>Profile status</dt>
-                  <dd>Preview-ready</dd>
+                  <dd>
+                    {profileStatus.isLoading
+                      ? "Loading"
+                      : profileStatus.error
+                        ? "Unavailable"
+                        : "Connected"}
+                  </dd>
                 </div>
               </dl>
             </div>
@@ -591,25 +654,37 @@ export default function UserProfile({ previewMode = false, previewUser }) {
             </div>
             <ul className="elite-profile-security">
               {userProfileData.securityItems.map((item) => (
-                <li key={item}>{item}</li>
+                <li key={item}>
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
               ))}
             </ul>
-            <Link to={reviewsPath} className="elite-profile-review-link">
-              View your reviews
-            </Link>
-            <button
-              type="button"
-              className="elite-profile-logout"
-              onClick={handleLogout}
-            >
-              <LogOut size={16} aria-hidden="true" />
-              Logout
-            </button>
+            <div className="elite-profile-account-actions">
+              <Link to={reviewsPath} className="elite-profile-review-link">
+                <Star size={16} aria-hidden="true" />
+                View your reviews
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <button
+                type="button"
+                className="elite-profile-logout"
+                onClick={handleLogout}
+              >
+                <LogOut size={16} aria-hidden="true" />
+                Logout
+              </button>
+            </div>
           </section>
         </aside>
       </div>
 
-      <ProfileRecommendation stay={userProfileData.recommendedStay} />
+      {previewMode ? (
+        <ProfileRecommendation
+          propertyPath="/property"
+          stay={userProfileData.recommendedStay}
+        />
+      ) : null}
     </section>
   );
 }

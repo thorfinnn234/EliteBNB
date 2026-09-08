@@ -1,5 +1,5 @@
 import { ArrowRight, CalendarDays, CheckCircle2, MapPin, UsersRound } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ContentSkeleton,
@@ -25,11 +25,17 @@ const emptyTripGroups = {
  * The card avoids cancellation rules because those must be decided by backend
  * booking state in a later integration pass.
  */
-function TripCard({ prominent = false, trip }) {
+function TripCard({ prominent = false, previewMode = false, trip }) {
+  const propertyPath = previewMode ? "/property" : "/user/property";
+
   return (
     <article className={`elite-trip-card${prominent ? " is-prominent" : ""}`}>
-      <Link to={`/property/${trip.propertyId}`} className="elite-trip-card__media">
-        <img src={trip.image} alt={trip.imageAlt} loading="lazy" />
+      <Link to={`${propertyPath}/${trip.propertyId}`} className="elite-trip-card__media">
+        {trip.image ? (
+          <img src={trip.image} alt={trip.imageAlt} loading="lazy" />
+        ) : (
+          <span className="elite-trip-card__media-empty">No image available</span>
+        )}
       </Link>
 
       <div className="elite-trip-card__content">
@@ -67,7 +73,7 @@ function TripCard({ prominent = false, trip }) {
 
         <div className="elite-trip-card__footer">
           <span>Ref {trip.reference}</span>
-          <Link to={`/property/${trip.propertyId}`}>
+          <Link to={`${propertyPath}/${trip.propertyId}`}>
             View trip
             <ArrowRight size={15} aria-hidden="true" />
           </Link>
@@ -127,16 +133,8 @@ export default function Trips({ previewMode = false }) {
     isLoading: !previewMode,
     error: false,
   });
-  const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
+  const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const { emptyStates, tabs } = userTripsData;
-  const fallbackTrips = useMemo(
-    () => [
-      ...userTripsData.trips.upcoming,
-      ...userTripsData.trips.completed,
-      ...userTripsData.trips.cancelled,
-    ],
-    []
-  );
 
   /**
    * Loads authenticated bookings only for production USER routes. Preview
@@ -158,7 +156,7 @@ export default function Trips({ previewMode = false }) {
 
         if (!isMounted) return;
 
-        setProductionTrips(groupTripsByStatus(response.data, fallbackTrips));
+        setProductionTrips(groupTripsByStatus(response.data));
         setProductionState({ isLoading: false, error: false });
       } catch (error) {
         console.error("Failed to load user trips:", error);
@@ -175,7 +173,7 @@ export default function Trips({ previewMode = false }) {
     return () => {
       isMounted = false;
     };
-  }, [fallbackTrips, previewMode]);
+  }, [previewMode]);
 
   const presentationState = previewMode
     ? userTripsData.presentationState
@@ -203,7 +201,9 @@ export default function Trips({ previewMode = false }) {
         title="Your journey, beautifully arranged."
         description="Upcoming escapes stay prominent, while completed and cancelled reservations remain close enough to revisit without becoming booking records."
         media={
-          nextTrip ? <img src={nextTrip.image} alt="" loading="lazy" /> : null
+          nextTrip && nextTrip.image ? (
+            <img src={nextTrip.image} alt="" loading="lazy" />
+          ) : null
         }
         action={<TripHeroTicket trip={nextTrip} />}
       />
@@ -229,6 +229,7 @@ export default function Trips({ previewMode = false }) {
             <TripCard
               key={trip.id}
               prominent={activeTab === "upcoming" && index === 0}
+              previewMode={previewMode}
               trip={trip}
             />
           ))}

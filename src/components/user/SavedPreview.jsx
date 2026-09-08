@@ -5,12 +5,16 @@ import { Link } from "react-router-dom";
  * Displays a compact saved-stays preview so wishlist content feels available
  * without competing with the primary recommendation area.
  */
-export default function SavedPreview({ actionTo = "/user/wishlist", stays }) {
+export default function SavedPreview({
+  actionTo = "/user/wishlist",
+  propertyPath = "/property",
+  stays,
+}) {
   return (
     <div className="elite-saved-preview">
       {stays.slice(0, 3).map((stay, index) => (
         <Link
-          to={`/property/${stay.id}`}
+          to={`${propertyPath}/${stay.id}`}
           className="elite-saved-preview__item"
           key={stay.id}
           style={{ "--saved-index": index }}

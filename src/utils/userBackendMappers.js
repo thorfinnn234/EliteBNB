@@ -146,13 +146,22 @@ export function mapPropertyToStay(property, fallback = {}, variant) {
  * property fields, so both paths are supported.
  */
 export function mapFavoriteToStay(favorite, fallback = {}, variant) {
-  const property = favorite?.property ?? favorite;
-  const mappedStay = mapPropertyToStay(property, fallback, variant);
+  const hasNestedProperty = Boolean(favorite?.property);
+  const property = hasNestedProperty ? favorite.property : favorite;
+  const propertyId = hasNestedProperty
+    ? property?.id
+    : favorite?.propertyId;
+  const mappedStay = mapPropertyToStay(
+    { ...property, id: propertyId },
+    fallback,
+    variant
+  );
 
   return {
     ...mappedStay,
     favoriteId: favorite?.favoriteId ?? favorite?.id,
-    id: property?.id ?? favorite?.propertyId ?? mappedStay.id,
+    propertyId: propertyId ?? mappedStay.propertyId,
+    id: propertyId ?? null,
   };
 }
 
@@ -196,45 +205,43 @@ function formatTripDateRange(checkIn, checkOut, fallback = "Dates pending") {
  * Maps booking DTOs into the visual trip-card shape used by the accepted
  * itinerary page.
  */
-export function mapBookingToTrip(booking, fallback = {}) {
+export function mapBookingToTrip(booking) {
   const property = booking?.property ?? {};
   const propertyId =
-    booking?.propertyId ?? property?.id ?? fallback.propertyId ?? fallback.id;
+    booking?.propertyId ?? property?.id;
   const checkIn = booking?.checkIn ?? booking?.checkInDate;
   const checkOut = booking?.checkOut ?? booking?.checkOutDate;
-  const status = booking?.status ?? fallback.status;
+  const status = booking?.status;
 
   return {
-    ...fallback,
-    id: booking?.id ?? fallback.id,
+    id: booking?.id,
     propertyId,
     name:
       booking?.propertyTitle ||
       booking?.propertyName ||
       property?.title ||
       property?.name ||
-      fallback.name ||
-      "EliteBNB stay",
-    location: getPropertyLocation(property, booking?.location ?? fallback.location),
-    image: getPropertyImage(property) || fallback.image,
+      "Property unavailable",
+    location: getPropertyLocation(property, booking?.location || "Location unavailable"),
+    image: getPropertyImage(property),
     imageAlt:
       property?.title || property?.name
         ? `${property.title || property.name} property photograph`
-        : fallback.imageAlt,
-    dates: booking?.dates || formatTripDateRange(checkIn, checkOut, fallback.dates),
-    nights: booking?.nights || getNightCount(checkIn, checkOut) || fallback.nights,
-    guests: `${booking?.numberOfGuests ?? booking?.guests ?? fallback.guests ?? 1} guests`,
-    status: formatEnumLabel(status, fallback.status),
+        : "",
+    dates: booking?.dates || formatTripDateRange(checkIn, checkOut, "Dates unavailable"),
+    nights: booking?.nights || getNightCount(checkIn, checkOut) || "Duration unavailable",
+    guests:
+      booking?.numberOfGuests ?? booking?.guests
+        ? `${booking.numberOfGuests ?? booking.guests} guests`
+        : "Guest count unavailable",
+    status: formatEnumLabel(status, "Status unavailable"),
     statusCode: String(status || "").toUpperCase(),
     reference:
       booking?.bookingReference ||
       booking?.reference ||
       booking?.id ||
-      fallback.reference,
-    note:
-      booking?.note ||
-      fallback.note ||
-      "Your itinerary will update as the booking moves forward.",
+      "Reference unavailable",
+    note: booking?.note || "Stay details unavailable",
   };
 }
 
@@ -242,10 +249,10 @@ export function mapBookingToTrip(booking, fallback = {}) {
  * Places mapped trips into the existing Upcoming, Completed, and Cancelled
  * buckets according to the backend status value.
  */
-export function groupTripsByStatus(bookings, fallbacks = []) {
+export function groupTripsByStatus(bookings) {
   return normalizeApiList(bookings).reduce(
-    (groups, booking, index) => {
-      const mappedTrip = mapBookingToTrip(booking, fallbacks[index]);
+    (groups, booking) => {
+      const mappedTrip = mapBookingToTrip(booking);
       const status = mappedTrip.statusCode;
 
       if (status === "COMPLETED") {

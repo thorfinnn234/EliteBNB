@@ -76,6 +76,9 @@ function buildProductionHome({
   const firstUpcomingBooking = getFirstUpcomingBooking(bookings);
 
   return {
+    favoriteIds: favorites.map(
+      (favorite) => favorite?.property?.id ?? favorite?.propertyId ?? favorite?.id
+    ),
     featuredStay: leadProperty
       ? {
           ...mapPropertyToStay(
@@ -128,6 +131,7 @@ function buildProductionHome({
 export default function UserHome({ previewMode = false, previewUser }) {
   const { user } = useAuth();
   const [productionHome, setProductionHome] = useState(null);
+  const [favoriteLoadingId, setFavoriteLoadingId] = useState(null);
   const [productionState, setProductionState] = useState({
     isLoading: !previewMode,
     errors: {
@@ -139,7 +143,7 @@ export default function UserHome({ previewMode = false, previewUser }) {
   });
   const firstName = getFirstName(previewUser ?? user);
   const greeting = firstName ? `Welcome back, ${firstName}.` : "Welcome back.";
-  const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
+  const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const savedPath = previewMode ? "/dev/user-preview/saved" : "/user/wishlist";
   const tripsPath = previewMode ? "/dev/user-preview/trips" : "/user/trips";
   /**
@@ -205,8 +209,36 @@ export default function UserHome({ previewMode = false, previewUser }) {
     savedStays,
     upcomingTrip,
   } = homeSource;
+  const favoriteIds = homeSource.favoriteIds ?? [];
 
   const { errors, isLoading } = presentationState;
+
+  const handleFavoriteToggle = async (stay) => {
+    if (favoriteLoadingId === stay.id) return;
+
+    const isSaved = favoriteIds.includes(stay.id);
+
+    try {
+      setFavoriteLoadingId(stay.id);
+
+      if (isSaved) {
+        await favoriteService.remove(stay.id);
+      } else {
+        await favoriteService.add(stay.id);
+      }
+
+      setProductionHome((currentHome) => ({
+        ...currentHome,
+        favoriteIds: isSaved
+          ? currentHome.favoriteIds.filter((id) => id !== stay.id)
+          : [...currentHome.favoriteIds, stay.id],
+      }));
+    } catch (error) {
+      console.error("Failed to update favorite:", error);
+    } finally {
+      setFavoriteLoadingId(null);
+    }
+  };
 
   /**
    * Keeps empty-state recovery links inside the preview route family when the
@@ -263,7 +295,13 @@ export default function UserHome({ previewMode = false, previewUser }) {
               description="Your recommendations will be available again shortly."
             />
           ) : featuredStay ? (
-            <FeaturedStay stay={featuredStay} />
+            <FeaturedStay
+              favoriteLoading={favoriteLoadingId === featuredStay.id}
+              isSaved={favoriteIds.includes(featuredStay.id)}
+              onToggleFavorite={previewMode ? undefined : handleFavoriteToggle}
+              propertyPath={previewMode ? "/property" : "/user/property"}
+              stay={featuredStay}
+            />
           ) : (
             <SectionEmptyState
               {...getPreviewAwareEmptyState(emptyStates.recommendations)}
@@ -305,7 +343,11 @@ export default function UserHome({ previewMode = false, previewUser }) {
                 description="Saved stays will be available again shortly."
               />
             ) : savedStays.length ? (
-              <SavedPreview actionTo={savedPath} stays={savedStays} />
+              <SavedPreview
+                actionTo={savedPath}
+                propertyPath={previewMode ? "/property" : "/user/property"}
+                stays={savedStays}
+              />
             ) : (
               <SectionEmptyState
                 {...getPreviewAwareEmptyState(emptyStates.savedStays)}
@@ -337,7 +379,15 @@ export default function UserHome({ previewMode = false, previewUser }) {
         ) : recommendations.length ? (
           <div className="elite-user-home__card-grid">
             {recommendations.map((stay) => (
-              <UserStayCard key={stay.id} stay={stay} variant={stay.variant} />
+              <UserStayCard
+                favoriteLoading={favoriteLoadingId === stay.id}
+                isSaved={favoriteIds.includes(stay.id)}
+                onToggleFavorite={previewMode ? undefined : handleFavoriteToggle}
+                propertyPath={previewMode ? "/property" : "/user/property"}
+                key={stay.id}
+                stay={stay}
+                variant={stay.variant}
+              />
             ))}
           </div>
         ) : (

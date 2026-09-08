@@ -22,10 +22,12 @@ import "./UserPages.css";
  * Production routes can remove the stay through the favorite service, while
  * preview mode keeps the same interaction safely presentational.
  */
-function FeaturedSavedStay({ onRemove, removingId, stay }) {
+function FeaturedSavedStay({ onRemove, previewMode, removingId, stay }) {
+  const propertyPath = previewMode ? "/property" : "/user/property";
+
   return (
     <article className="elite-saved-feature" data-user-page-reveal>
-      <Link to={`/property/${stay.id}`} className="elite-saved-feature__media">
+      <Link to={`${propertyPath}/${stay.id}`} className="elite-saved-feature__media">
         <img src={stay.image} alt={stay.imageAlt} loading="lazy" />
         <span aria-hidden="true" />
       </Link>
@@ -49,7 +51,7 @@ function FeaturedSavedStay({ onRemove, removingId, stay }) {
           </strong>
         </div>
         <div className="elite-saved-feature__actions">
-          <Link to={`/property/${stay.id}`}>
+          <Link to={`${propertyPath}/${stay.id}`}>
             Open stay
             <ArrowRight size={15} aria-hidden="true" />
           </Link>
@@ -73,10 +75,17 @@ function FeaturedSavedStay({ onRemove, removingId, stay }) {
  * The remove affordance calls the favorite service in production and remains
  * safely inert in DEV preview mode.
  */
-function SavedCollectionCard({ onRemove, removingId, stay }) {
+function SavedCollectionCard({ onRemove, previewMode, removingId, stay }) {
   return (
     <div className={`elite-saved-card elite-saved-card--${stay.variant ?? "standard"}`}>
-      <UserStayCard stay={stay} variant={stay.variant} />
+      <UserStayCard
+        favoriteLoading={removingId === stay.id}
+        propertyPath={previewMode ? "/property" : "/user/property"}
+        isSaved
+        onToggleFavorite={() => onRemove(stay)}
+        stay={stay}
+        variant={stay.variant}
+      />
       <button
         type="button"
         className="elite-saved-card__remove"
@@ -97,8 +106,9 @@ function SavedCollectionCard({ onRemove, removingId, stay }) {
  * presentation content while production routes load favorite-service data.
  */
 export default function Wishlist({ previewMode = false }) {
-  const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
+  const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const [removingId, setRemovingId] = useState(null);
+  const [favoriteError, setFavoriteError] = useState("");
   const [productionStays, setProductionStays] = useState([]);
   const [productionState, setProductionState] = useState({
     isLoading: !previewMode,
@@ -182,6 +192,7 @@ export default function Wishlist({ previewMode = false }) {
 
     try {
       setRemovingId(stay.id);
+      setFavoriteError("");
       await favoriteService.remove(stay.propertyId ?? stay.id);
 
       setProductionStays((currentStays) =>
@@ -189,7 +200,11 @@ export default function Wishlist({ previewMode = false }) {
       );
     } catch (error) {
       console.error("Failed to remove saved stay:", error);
-      setProductionState({ isLoading: false, error: true });
+      setFavoriteError(
+        error?.response?.data?.message ||
+          error?.response?.data ||
+          "We couldn't update your saved stays."
+      );
     } finally {
       setRemovingId(null);
     }
@@ -211,6 +226,12 @@ export default function Wishlist({ previewMode = false }) {
         }
       />
 
+      {favoriteError ? (
+        <p className="elite-user-feedback elite-user-feedback--error" role="alert">
+          {String(favoriteError)}
+        </p>
+      ) : null}
+
       {presentationState.isLoading ? (
         <ContentSkeleton count={4} />
       ) : presentationState.error ? (
@@ -222,6 +243,7 @@ export default function Wishlist({ previewMode = false }) {
         <>
           <FeaturedSavedStay
             onRemove={handleRemoveFavorite}
+            previewMode={previewMode}
             removingId={removingId}
             stay={featuredSavedStay}
           />
@@ -231,6 +253,7 @@ export default function Wishlist({ previewMode = false }) {
               <SavedCollectionCard
                 key={stay.id}
                 onRemove={handleRemoveFavorite}
+                previewMode={previewMode}
                 removingId={removingId}
                 stay={stay}
               />

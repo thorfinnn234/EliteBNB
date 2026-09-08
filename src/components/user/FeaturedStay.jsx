@@ -6,10 +6,16 @@ import { Link } from "react-router-dom";
  * It uses prepared property data and links to the existing property details
  * route, leaving pricing and availability authority to the backend later.
  */
-export default function FeaturedStay({ stay }) {
+export default function FeaturedStay({
+  favoriteLoading = false,
+  isSaved = false,
+  onToggleFavorite,
+  propertyPath = "/property",
+  stay,
+}) {
   return (
     <article className="elite-featured-stay">
-      <Link to={`/property/${stay.id}`} className="elite-featured-stay__media">
+      <Link to={`${propertyPath}/${stay.id}`} className="elite-featured-stay__media">
         <img src={stay.image} alt={stay.imageAlt} loading="eager" />
         <span className="elite-featured-stay__shade" aria-hidden="true" />
       </Link>
@@ -49,15 +55,22 @@ export default function FeaturedStay({ stay }) {
         </div>
 
         <div className="elite-featured-stay__actions">
-          <Link to={`/property/${stay.id}`}>
+          <Link to={`${propertyPath}/${stay.id}`}>
             View stay
             <ArrowRight size={16} aria-hidden="true" />
           </Link>
           <button
             type="button"
             aria-label={`Save ${stay.name} to wishlist`}
+            aria-pressed={isSaved}
+            disabled={favoriteLoading}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onToggleFavorite?.(stay);
+            }}
           >
-            <Heart size={18} aria-hidden="true" />
+            <Heart size={18} fill={isSaved ? "currentColor" : "none"} aria-hidden="true" />
             Save
           </button>
         </div>

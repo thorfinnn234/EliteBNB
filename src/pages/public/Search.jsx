@@ -9,6 +9,7 @@ import {
 import UserPageHeader from "../../components/user/UserPageHeader";
 import UserStayCard from "../../components/user/UserStayCard";
 import { userExploreData } from "../../data/userHomeData";
+import { favoriteService } from "../../services/favoriteService";
 import { propertyService } from "../../services/propertyService";
 import {
   mapPropertyToStay,
@@ -110,6 +111,8 @@ export default function Search({ previewMode = false }) {
   const [filters, setFilters] = useState(userExploreData.filterDefaults);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [productionResults, setProductionResults] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [favoriteLoadingId, setFavoriteLoadingId] = useState(null);
   const [productionState, setProductionState] = useState({
     isLoading: !previewMode,
     error: false,
@@ -119,7 +122,12 @@ export default function Search({ previewMode = false }) {
     () => getInitialCriteria(location.search),
     [location.search]
   );
-  const searchPath = previewMode ? "/dev/user-preview/explore" : "/search";
+  const searchPath = previewMode
+    ? "/dev/user-preview/explore"
+    : location.pathname === "/user/explore"
+      ? "/user/explore"
+      : "/search";
+  const isUserExplore = !previewMode && location.pathname === "/user/explore";
   const { filterGroups, results } = userExploreData;
 
   /**
@@ -157,6 +165,24 @@ export default function Search({ previewMode = false }) {
           setProductionResults(mappedResults);
           setProductionState({ isLoading: false, error: false });
         }
+
+        if (isUserExplore) {
+          try {
+            const favoriteResponse = await favoriteService.getMine();
+            const favorites = normalizeApiList(favoriteResponse.data);
+
+            if (isMounted) {
+              setFavoriteIds(
+                favorites.map(
+                  (favorite) =>
+                    favorite?.property?.id ?? favorite?.propertyId ?? favorite?.id
+                )
+              );
+            }
+          } catch (favoriteError) {
+            console.error("Failed to load favorites:", favoriteError);
+          }
+        }
       } catch (error) {
         console.error("Failed to load search results:", error);
 
@@ -178,6 +204,7 @@ export default function Search({ previewMode = false }) {
     initialCriteria.destination,
     initialCriteria.guests,
     previewMode,
+    isUserExplore,
   ]);
 
   const presentationState = previewMode
@@ -242,6 +269,32 @@ export default function Search({ previewMode = false }) {
    */
   const handleClearFilters = () => {
     setFilters(userExploreData.filterDefaults);
+  };
+
+  const handleFavoriteToggle = async (stay) => {
+    if (favoriteLoadingId === stay.id) return;
+
+    const isSaved = favoriteIds.includes(stay.id);
+
+    try {
+      setFavoriteLoadingId(stay.id);
+
+      if (isSaved) {
+        await favoriteService.remove(stay.id);
+      } else {
+        await favoriteService.add(stay.id);
+      }
+
+      setFavoriteIds((currentIds) =>
+        isSaved
+          ? currentIds.filter((id) => id !== stay.id)
+          : [...currentIds, stay.id]
+      );
+    } catch (error) {
+      console.error("Failed to update favorite:", error);
+    } finally {
+      setFavoriteLoadingId(null);
+    }
   };
 
   return (
@@ -432,7 +485,15 @@ export default function Search({ previewMode = false }) {
           />
         ) : visibleResults.length ? (
           visibleResults.map((stay) => (
-            <UserStayCard key={stay.id} stay={stay} variant={stay.variant} />
+            <UserStayCard
+              favoriteLoading={favoriteLoadingId === stay.id}
+              isSaved={isUserExplore && favoriteIds.includes(stay.id)}
+              onToggleFavorite={isUserExplore ? handleFavoriteToggle : undefined}
+              propertyPath={isUserExplore ? "/user/property" : "/property"}
+              key={stay.id}
+              stay={stay}
+              variant={stay.variant}
+            />
           ))
         ) : (
           <div className="elite-user-feedback">

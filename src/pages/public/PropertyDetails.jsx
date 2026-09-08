@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { bookingService } from "../../services/bookingService";
 import { paymentService } from "../../services/paymentService";
 import {
@@ -30,6 +30,7 @@ import {
 
 import { propertyService } from "../../services/propertyService";
 import { favoriteService } from "../../services/favoriteService";
+import { reviewService } from "../../services/reviewService";
 
 const AMENITY_ICONS = {
   WIFI: Wifi,
@@ -46,9 +47,19 @@ const AMENITY_ICONS = {
   ELEVATOR: Building2,
 };
 
+function getReviewAuthor(review) {
+  return review?.user?.name || review?.userName || review?.reviewerName || "Guest";
+}
+
+function getImageSource(image) {
+  return typeof image === "string" ? image : image?.imageUrl || image?.url || "";
+}
+
 export default function PropertyDetails() {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const isUserRoute = location.pathname.startsWith("/user/");
 
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -61,6 +72,9 @@ export default function PropertyDetails() {
   const [savingFavorite, setSavingFavorite] = useState(false);
   const [favoriteError, setFavoriteError] = useState("");
   const [favoriteSuccess, setFavoriteSuccess] = useState("");
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState("");
 
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
@@ -104,6 +118,40 @@ export default function PropertyDetails() {
       isCurrentEffect = false;
     };
   }, [loadProperty]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadReviews() {
+      try {
+        setReviewsLoading(true);
+        setReviewsError("");
+        const response = await reviewService.getPropertyReviews(id);
+        const reviewData = Array.isArray(response.data)
+          ? response.data
+          : response.data?.content ?? response.data?.data ?? [];
+
+        if (isMounted) {
+          setReviews(reviewData);
+          setReviewsLoading(false);
+        }
+      } catch (reviewError) {
+        console.error("Failed to load property reviews:", reviewError);
+
+        if (isMounted) {
+          setReviews([]);
+          setReviewsLoading(false);
+          setReviewsError("Reviews are temporarily unavailable.");
+        }
+      }
+    }
+
+    loadReviews();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const formatPrice = (price) =>
     new Intl.NumberFormat("en-NG", {
@@ -308,7 +356,7 @@ if (loading) {
 
           <button
             type="button"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(isUserRoute ? "/user/explore" : "/")}
             className="mt-6 rounded-xl bg-[#172554] px-6 py-3 text-sm font-bold text-white"
           >
             Back to Home
@@ -318,7 +366,11 @@ if (loading) {
     );
   }
 
-  const images = property.images || [];
+  const images = Array.isArray(property.images) ? property.images : [];
+  const averageRating = reviews.length
+    ? reviews.reduce((total, review) => total + Number(review.rating || 0), 0) /
+      reviews.length
+    : 0;
 
   return (
     <main className="min-h-screen bg-[#FAF9F6]">
@@ -359,7 +411,7 @@ if (loading) {
 
               <span className="flex items-center gap-1.5">
                 <Star className="h-4 w-4 fill-[#D4A72C] text-[#D4A72C]" />
-                New listing
+                {averageRating ? averageRating.toFixed(1) : "No reviews"}
               </span>
             </div>
           </div>
@@ -408,24 +460,28 @@ if (loading) {
         {/* IMAGE GALLERY */}
         <section className="mt-7 overflow-hidden rounded-3xl">
           {images.length > 0 ? (
-            <div className="grid h-[420px] gap-2 sm:h-[500px] lg:grid-cols-2">
+            <div
+              className={`grid h-[420px] gap-2 sm:h-[500px] ${
+                images.length > 1 ? "lg:grid-cols-2" : "lg:grid-cols-1"
+              }`}
+            >
               <div className="h-full overflow-hidden bg-[#E5E7EB]">
                 <img
-                  src={images[0]}
+                  src={getImageSource(images[0])}
                   alt={property.title}
                   className="h-full w-full object-cover transition duration-500 hover:scale-[1.02]"
                 />
               </div>
 
               <div className="hidden grid-cols-2 gap-2 lg:grid">
-                {[1, 2, 3, 4].map((index) => (
+                {images.slice(1).map((image, index) => (
                   <div
-                    key={index}
+                    key={`${getImageSource(image)}-${index}`}
                     className="relative overflow-hidden bg-[#E5E7EB]"
                   >
-                    {images[index] ? (
+                    {getImageSource(image) ? (
                       <img
-                        src={images[index]}
+                        src={getImageSource(image)}
                         alt={`${property.title} ${index + 1}`}
                         className="h-full w-full object-cover transition duration-500 hover:scale-105"
                       />
@@ -470,11 +526,11 @@ if (loading) {
                 </p>
 
                 <h2 className="mt-2 text-2xl font-extrabold text-[#172554]">
-                  Hosted by {property.hostName}
+                  Hosted by {property.hostName || "Host unavailable"}
                 </h2>
 
                 <p className="mt-2 text-sm text-[#64748B]">
-                  A beautiful EliteBNB stay prepared for your next trip.
+                  Host information provided by EliteBNB.
                 </p>
               </div>
 
@@ -555,7 +611,7 @@ if (loading) {
               )}
             </div>
 
-            {/* REVIEWS PLACEHOLDER */}
+            {/* REVIEWS */}
             <div className="py-8">
               <div className="flex items-center justify-between gap-4">
                 <div>
@@ -564,21 +620,52 @@ if (loading) {
                   </p>
 
                   <h2 className="mt-2 text-2xl font-extrabold text-[#172554]">
-                    Reviews
+                    Reviews {reviews.length ? `(${reviews.length})` : ""}
                   </h2>
                 </div>
 
-                <Star className="h-7 w-7 fill-[#D4A72C] text-[#D4A72C]" />
+                <div className="flex items-center gap-2 text-sm font-bold text-[#172554]">
+                  <Star className="h-7 w-7 fill-[#D4A72C] text-[#D4A72C]" />
+                  {averageRating ? averageRating.toFixed(1) : "No rating"}
+                </div>
               </div>
 
-              <div className="mt-6 rounded-3xl border border-[#E5E7EB] bg-white p-6">
-                <h3 className="font-bold text-[#172554]">No reviews yet</h3>
-
-                <p className="mt-2 text-sm leading-6 text-[#64748B]">
-                  Once guests complete their stays, their verified reviews will
-                  appear here.
-                </p>
-              </div>
+              {reviewsLoading ? (
+                <p className="mt-6 text-sm text-[#64748B]">Loading reviews...</p>
+              ) : reviewsError ? (
+                <p className="mt-6 text-sm text-[#64748B]">{reviewsError}</p>
+              ) : reviews.length ? (
+                <div className="mt-6 space-y-3">
+                  {reviews.slice(0, 5).map((review, index) => (
+                    <article
+                      key={review.id ?? `${review.createdAt ?? "review"}-${index}`}
+                      className="rounded-3xl border border-[#E5E7EB] bg-white p-6"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <strong className="text-[#172554]">
+                          {getReviewAuthor(review)}
+                        </strong>
+                        <span className="flex items-center gap-1 text-sm font-bold text-[#172554]">
+                          <Star className="h-4 w-4 fill-[#D4A72C] text-[#D4A72C]" />
+                          {Number(review.rating || 0).toFixed(1)}
+                        </span>
+                      </div>
+                      {review.comment || review.text ? (
+                        <p className="mt-3 text-sm leading-6 text-[#64748B]">
+                          {review.comment || review.text}
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-6 rounded-3xl border border-[#E5E7EB] bg-white p-6">
+                  <h3 className="font-bold text-[#172554]">No reviews yet</h3>
+                  <p className="mt-2 text-sm leading-6 text-[#64748B]">
+                    There are no guest reviews for this property yet.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

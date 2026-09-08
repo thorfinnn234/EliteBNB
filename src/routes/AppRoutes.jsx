@@ -217,6 +217,7 @@ export default function AppRoutes() {
       <Route path="/user" element={<Navigate to="/user/dashboard" replace />} />
       <Route path="/user/home" element={<Navigate to="/user/dashboard" replace />} />
       <Route path="/user/dashboard" element={<UserPage><UserHome /></UserPage>} />
+      <Route path="/user/explore" element={<UserPage><Search /></UserPage>} />
       <Route path="/user/property/:id" element={<UserPage><PropertyDetails /></UserPage>} />
       <Route path="/user/trips" element={<UserPage><Trips /></UserPage>} />
       <Route path="/user/wishlist" element={<UserPage><Wishlist /></UserPage>} />

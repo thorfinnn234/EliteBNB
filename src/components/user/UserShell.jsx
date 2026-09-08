@@ -29,8 +29,8 @@ const primaryNavItems = [
   {
     key: "explore",
     label: "Explore",
-    routePath: "/search",
-    productionTo: "/search",
+    routePath: "/user/explore",
+    productionTo: "/user/explore",
     previewTo: "/dev/user-preview/explore",
     icon: Search,
   },
@@ -80,6 +80,7 @@ const routeLabels = {
   "/dev/user-preview/profile": "Profile",
   "/dev/user-preview": "Guest home",
   "/search": "Explore",
+  "/user/explore": "Explore",
   "/user/dashboard": "Guest home",
   "/user/trips": "Trips",
   "/user/wishlist": "Saved stays",
@@ -457,7 +458,7 @@ export default function UserShell({
   const bottomNavItems = getNavigationItems(mobileNavItems, previewMode);
   const homeTo = previewMode ? "/dev/user-preview" : "/user/dashboard";
   const profileTo = previewMode ? "/dev/user-preview/profile" : "/user/profile";
-  const searchTo = previewMode ? "/dev/user-preview/explore" : "/search";
+  const searchTo = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const shouldRenderDockMinimized =
     isDockCollapsedByScroll && !isDockRestoredByIntent;
 

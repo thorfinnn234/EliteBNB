@@ -39,7 +39,7 @@ function StaticRating({ rating }) {
 /**
  * Displays one completed review as guest-written travel context.
  */
-function SubmittedReviewCard({ review }) {
+function SubmittedReviewCard({ previewMode = false, review }) {
   return (
     <article className="elite-review-card">
       <img src={review.image} alt={review.imageAlt} loading="lazy" />
@@ -51,7 +51,7 @@ function SubmittedReviewCard({ review }) {
         <h3>{review.property}</h3>
         <p className="elite-review-card__location">{review.location}</p>
         <p className="elite-review-card__text">“{review.text}”</p>
-        <Link to={`/property/${review.propertyId}`}>
+        <Link to={`${previewMode ? "/property" : "/user/property"}/${review.propertyId}`}>
           Open stay
           <ArrowRight size={15} aria-hidden="true" />
         </Link>
@@ -417,7 +417,11 @@ export default function Reviews({ previewMode = false }) {
             {submitted.length ? (
               <div className="elite-review-list">
                 {submitted.map((review) => (
-                  <SubmittedReviewCard key={review.id} review={review} />
+                  <SubmittedReviewCard
+                    key={review.id}
+                    previewMode={previewMode}
+                    review={review}
+                  />
                 ))}
               </div>
             ) : (
