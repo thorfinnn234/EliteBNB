@@ -519,6 +519,7 @@
 }
 
 .elite-trip-card__footer a,
+.elite-trip-card__footer button,
 .elite-saved-feature__actions a {
   padding: 0 0.9rem;
   background: var(--guest-navy);
@@ -526,9 +527,149 @@
 }
 
 .elite-trip-card__footer a:hover,
+.elite-trip-card__footer button:hover:not(:disabled),
 .elite-saved-feature__actions a:hover {
   background: #0F1E46;
   transform: translateY(-1px);
+}
+
+.elite-trip-card__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: flex-end;
+}
+
+.elite-trip-card__footer a.elite-trip-card__property-link {
+  border: 1px solid rgba(23, 37, 84, 0.14);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--guest-navy);
+}
+
+.elite-trip-card__cancel {
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  background: rgba(254, 242, 242, 0.94) !important;
+  color: #b91c1c !important;
+}
+
+.elite-trip-card__cancel:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.elite-trip-cancel-modal,
+.elite-reservation-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(5, 11, 29, 0.58);
+}
+
+.elite-trip-cancel-modal__panel {
+  position: relative;
+  width: min(100%, 31rem);
+  border: 1px solid rgba(250, 249, 246, 0.52);
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 249, 246, 0.98));
+  box-shadow: 0 36px 96px rgba(5, 11, 29, 0.28);
+  padding: clamp(1.35rem, 4vw, 2rem);
+}
+
+.elite-trip-cancel-modal__close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.45rem;
+  height: 2.45rem;
+  border: 1px solid rgba(23, 37, 84, 0.12);
+  border-radius: 999px;
+  background: rgba(250, 249, 246, 0.82);
+  color: var(--guest-navy);
+  cursor: pointer;
+}
+
+.elite-trip-cancel-modal__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.7rem;
+  height: 3.7rem;
+  margin-bottom: 1.1rem;
+  border-radius: 1rem;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.elite-trip-cancel-modal__panel h2 {
+  margin: 0.45rem 0 0;
+  color: var(--guest-navy);
+  font-family: var(--elite-font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 650;
+  line-height: 0.98;
+}
+
+.elite-trip-cancel-modal__panel p:not(.elite-user-page-header__eyebrow) {
+  margin: 1rem 0 0;
+  color: var(--guest-slate);
+  line-height: 1.7;
+}
+
+.elite-trip-cancel-modal__error {
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 1rem;
+  background: #fef2f2;
+  color: #b91c1c !important;
+  font-size: 0.86rem;
+  font-weight: 850;
+  padding: 0.8rem 0.9rem;
+}
+
+.elite-trip-cancel-modal__actions,
+.elite-reservation-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  margin-top: 1.35rem;
+}
+
+.elite-trip-cancel-modal__actions button,
+.elite-reservation-modal__actions button {
+  min-height: 2.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 1rem;
+}
+
+.elite-trip-cancel-modal__actions button:first-child,
+.elite-reservation-modal__actions button:first-child {
+  border: 1px solid rgba(23, 37, 84, 0.14);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--guest-navy);
+}
+
+.elite-trip-cancel-modal__actions button:last-child,
+.elite-reservation-modal__actions button:last-child {
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  background: #b91c1c;
+  color: #FFFFFF;
+}
+
+.elite-trip-cancel-modal__actions button:disabled,
+.elite-trip-cancel-modal__close:disabled,
+.elite-reservation-modal__actions button:disabled,
+.elite-reservation-modal__close:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
 }
 
 .elite-saved-feature {
@@ -4552,6 +4693,575 @@
   text-align: right;
 }
 
+/* =========================================================
+RESERVATION DETAILS
+This page treats a booking as an existing travel document. It uses `/bookings/my`
+for ownership, then hydrated property data for imagery and stay facts.
+========================================================= */
+.elite-reservation-detail {
+  gap: clamp(1.2rem, 2.4vw, 2.1rem);
+  padding-bottom: clamp(2.5rem, 6vw, 5rem);
+}
+
+.elite-reservation-back {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: 0.45rem;
+  min-height: 2.7rem;
+  border: 1px solid rgba(23, 37, 84, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--guest-navy);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 850;
+  padding: 0 1rem;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-reservation-back:hover {
+  border-color: rgba(212, 167, 44, 0.45);
+  background: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.elite-reservation-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1fr);
+  min-height: clamp(29rem, 48vw, 41rem);
+  overflow: hidden;
+  border: 1px solid rgba(250, 249, 246, 0.16);
+  border-radius: clamp(1.6rem, 3vw, 2.6rem);
+  background:
+    radial-gradient(circle at 76% 10%, rgba(212, 167, 44, 0.18), transparent 17rem),
+    linear-gradient(135deg, #101A3E 0%, var(--guest-navy) 50%, #263C69 100%);
+  box-shadow: 0 34px 100px rgba(15, 23, 42, 0.15);
+  color: #FFFFFF;
+  position: relative;
+}
+
+.elite-reservation-hero::after {
+  position: absolute;
+  right: -7rem;
+  bottom: -15rem;
+  width: min(32rem, 38vw);
+  height: min(32rem, 38vw);
+  border: 1px solid rgba(212, 167, 44, 0.18);
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+  content: "";
+  pointer-events: none;
+}
+
+.elite-reservation-hero__media {
+  min-height: 100%;
+  margin: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.elite-reservation-hero__media::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, transparent 50%, rgba(16, 26, 62, 0.4)),
+    linear-gradient(180deg, transparent 45%, rgba(5, 11, 29, 0.34));
+  content: "";
+  pointer-events: none;
+}
+
+.elite-reservation-hero__media img,
+.elite-reservation-hero__media span {
+  width: 100%;
+  height: 100%;
+}
+
+.elite-reservation-hero__media img {
+  display: block;
+  object-fit: cover;
+}
+
+.elite-reservation-hero__media span {
+  display: grid;
+  place-items: center;
+  gap: 0.65rem;
+  background: rgba(250, 249, 246, 0.1);
+  color: rgba(250, 249, 246, 0.78);
+  font-size: 0.9rem;
+  font-weight: 850;
+}
+
+.elite-reservation-hero__content {
+  align-content: end;
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.35rem);
+  min-width: 0;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  position: relative;
+  z-index: 1;
+}
+
+.elite-reservation-hero__topline,
+.elite-reservation-hero__facts,
+.elite-reservation-grid,
+.elite-reservation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.elite-reservation-hero__topline {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.elite-reservation-kicker {
+  margin: 0;
+  color: var(--guest-gold);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.elite-reservation-status {
+  border: 1px solid rgba(250, 249, 246, 0.24);
+  border-radius: 999px;
+  background: rgba(250, 249, 246, 0.1);
+  color: #FFFFFF;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  padding: 0.45rem 0.7rem;
+  text-transform: uppercase;
+}
+
+.elite-reservation-hero--confirmed .elite-reservation-status {
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(22, 163, 74, 0.16);
+}
+
+.elite-reservation-hero--pending .elite-reservation-status {
+  border-color: rgba(212, 167, 44, 0.5);
+  background: rgba(212, 167, 44, 0.16);
+}
+
+.elite-reservation-hero--cancelled .elite-reservation-status {
+  border-color: rgba(220, 38, 38, 0.42);
+  background: rgba(220, 38, 38, 0.16);
+}
+
+.elite-reservation-hero h1 {
+  max-width: 12ch;
+  margin: 0;
+  color: #FFFFFF;
+  font-family: var(--elite-font-display);
+  font-size: clamp(3.1rem, 7vw, 7.8rem);
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 0.88;
+}
+
+.elite-reservation-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: rgba(250, 249, 246, 0.78);
+  font-size: 0.98rem;
+  font-weight: 850;
+}
+
+.elite-reservation-hero__facts {
+  margin-top: clamp(0.4rem, 1.2vw, 0.9rem);
+}
+
+.elite-reservation-fact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-width: min(100%, 12rem);
+  gap: 0.12rem 0.48rem;
+  border: 1px solid rgba(250, 249, 246, 0.16);
+  border-radius: 0.95rem;
+  background: rgba(250, 249, 246, 0.08);
+  padding: 0.78rem 0.9rem;
+}
+
+.elite-reservation-fact svg {
+  grid-row: span 2;
+  color: var(--guest-gold);
+  margin-top: 0.08rem;
+}
+
+.elite-reservation-fact span {
+  color: rgba(250, 249, 246, 0.62);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.elite-reservation-fact strong {
+  color: #FFFFFF;
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.elite-reservation-grid {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.45fr);
+}
+
+.elite-reservation-panel,
+.elite-reservation-itinerary,
+.elite-reservation-property,
+.elite-reservation-limitation,
+.elite-reservation-empty {
+  border: 1px solid rgba(23, 37, 84, 0.11);
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(145deg, rgba(250, 249, 246, 0.84), rgba(255, 255, 255, 0.62));
+  box-shadow: 0 18px 58px rgba(15, 23, 42, 0.07);
+}
+
+.elite-reservation-panel,
+.elite-reservation-itinerary,
+.elite-reservation-property,
+.elite-reservation-limitation {
+  padding: clamp(1.2rem, 2.6vw, 2rem);
+}
+
+.elite-reservation-panel h2,
+.elite-reservation-itinerary h2,
+.elite-reservation-property h2,
+.elite-reservation-limitation h2,
+.elite-reservation-empty h1 {
+  margin: 0.45rem 0 0;
+  color: var(--guest-navy);
+  font-size: clamp(1.4rem, 2.6vw, 2.2rem);
+  font-weight: 950;
+  line-height: 1;
+}
+
+.elite-reservation-panel p:not(.elite-reservation-kicker),
+.elite-reservation-property p,
+.elite-reservation-limitation p,
+.elite-reservation-empty p {
+  max-width: 44rem;
+  margin: 0.75rem 0 0;
+  color: var(--guest-slate);
+  line-height: 1.7;
+}
+
+.elite-reservation-panel--total {
+  align-content: center;
+  display: grid;
+  background:
+    linear-gradient(145deg, rgba(23, 37, 84, 0.96), rgba(38, 60, 105, 0.9));
+  color: #FFFFFF;
+}
+
+.elite-reservation-panel--total strong {
+  color: var(--guest-gold);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 950;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  margin-top: 0.65rem;
+}
+
+.elite-reservation-panel--total span {
+  color: rgba(250, 249, 246, 0.68);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.55;
+  margin-top: 0.85rem;
+}
+
+.elite-reservation-inline-link,
+.elite-reservation-actions a,
+.elite-reservation-actions button,
+.elite-reservation-cancel-button,
+.elite-reservation-empty a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  gap: 0.42rem;
+  min-height: 2.75rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 900;
+  text-decoration: none;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-reservation-inline-link,
+.elite-reservation-actions a,
+.elite-reservation-empty a {
+  margin-top: 1rem;
+  border: 1px solid var(--guest-navy);
+  background: var(--guest-navy);
+  color: #FFFFFF;
+  padding: 0 1rem;
+}
+
+.elite-reservation-actions button {
+  border: 1px solid rgba(23, 37, 84, 0.16);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--guest-navy);
+  padding: 0 1rem;
+}
+
+.elite-reservation-inline-link:hover,
+.elite-reservation-actions a:hover,
+.elite-reservation-empty a:hover {
+  background: #0F1E46;
+  transform: translateY(-1px);
+}
+
+.elite-reservation-actions button:hover {
+  border-color: rgba(212, 167, 44, 0.42);
+  background: #FFFFFF;
+  transform: translateY(-1px);
+}
+
+.elite-reservation-cancel-button {
+  margin-top: 1rem;
+  border: 1px solid rgba(220, 38, 38, 0.24);
+  background: rgba(254, 242, 242, 0.95);
+  color: #b91c1c;
+  padding: 0 1rem;
+}
+
+.elite-reservation-cancel-button:hover:not(:disabled) {
+  background: #fee2e2;
+  transform: translateY(-1px);
+}
+
+.elite-reservation-cancel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.66;
+}
+
+.elite-reservation-itinerary {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.4rem);
+}
+
+.elite-reservation-timeline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(0.85rem, 2vw, 1.4rem);
+}
+
+.elite-reservation-timeline > div {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.elite-reservation-timeline span,
+.elite-reservation-summary dt {
+  color: var(--guest-slate);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.elite-reservation-timeline strong {
+  color: var(--guest-navy);
+  font-size: clamp(1.3rem, 2.5vw, 2rem);
+  font-weight: 950;
+  line-height: 1.05;
+}
+
+.elite-reservation-timeline i {
+  display: block;
+  width: min(18vw, 10rem);
+  height: 1px;
+  background:
+    linear-gradient(90deg, rgba(212, 167, 44, 0.08), rgba(212, 167, 44, 0.92), rgba(23, 37, 84, 0.18));
+}
+
+.elite-reservation-summary,
+.elite-reservation-property__facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.elite-reservation-summary div {
+  border-top: 1px solid rgba(23, 37, 84, 0.12);
+  padding-top: 0.85rem;
+}
+
+.elite-reservation-summary dd {
+  margin: 0.22rem 0 0;
+  color: var(--guest-charcoal);
+  font-size: clamp(1.25rem, 2.3vw, 2rem);
+  font-weight: 950;
+}
+
+.elite-reservation-property {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.35rem);
+}
+
+.elite-reservation-property__facts {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.elite-reservation-property .elite-reservation-fact {
+  border-color: rgba(23, 37, 84, 0.12);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.elite-reservation-property .elite-reservation-fact span {
+  color: var(--guest-slate);
+}
+
+.elite-reservation-property .elite-reservation-fact strong {
+  color: var(--guest-navy);
+}
+
+.elite-reservation-amenities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.elite-reservation-amenities span {
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--guest-slate);
+  font-size: 0.82rem;
+  font-weight: 850;
+  padding: 0.55rem 0.75rem;
+}
+
+.elite-reservation-actions {
+  align-items: center;
+}
+
+.elite-reservation-limitation {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  background:
+    linear-gradient(145deg, rgba(23, 37, 84, 0.075), rgba(250, 249, 246, 0.78));
+}
+
+.elite-reservation-limitation > svg {
+  color: var(--guest-gold);
+  margin-top: 0.2rem;
+}
+
+.elite-reservation-empty {
+  display: grid;
+  justify-items: start;
+  max-width: 42rem;
+  padding: clamp(1.35rem, 3vw, 2.2rem);
+}
+
+.elite-reservation-empty > svg {
+  color: var(--guest-gold);
+}
+
+.elite-reservation-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(5, 11, 29, 0.58);
+}
+
+.elite-reservation-modal__panel {
+  position: relative;
+  width: min(100%, 31rem);
+  border: 1px solid rgba(250, 249, 246, 0.52);
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(250, 249, 246, 0.98));
+  box-shadow: 0 36px 96px rgba(5, 11, 29, 0.28);
+  padding: clamp(1.35rem, 4vw, 2rem);
+}
+
+.elite-reservation-modal__close {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.45rem;
+  height: 2.45rem;
+  border: 1px solid rgba(23, 37, 84, 0.12);
+  border-radius: 999px;
+  background: rgba(250, 249, 246, 0.82);
+  color: var(--guest-navy);
+  cursor: pointer;
+}
+
+.elite-reservation-modal__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.7rem;
+  height: 3.7rem;
+  margin-bottom: 1.1rem;
+  border-radius: 1rem;
+  background: var(--guest-navy);
+  color: var(--guest-gold);
+}
+
+.elite-reservation-modal__icon--danger {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.elite-reservation-modal__panel h2 {
+  margin: 0.45rem 0 0;
+  color: var(--guest-navy);
+  font-family: var(--elite-font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 650;
+  line-height: 0.98;
+}
+
+.elite-reservation-modal__panel p:not(.elite-reservation-kicker) {
+  margin: 1rem 0 0;
+  color: var(--guest-slate);
+  line-height: 1.7;
+}
+
+.elite-reservation-modal__error {
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 1rem;
+  background: #fef2f2;
+  color: #b91c1c !important;
+  font-size: 0.86rem;
+  font-weight: 850;
+  padding: 0.8rem 0.9rem;
+}
+
 .elite-user-saved .elite-user-page-header--collection {
   grid-template-columns: minmax(0, 0.78fr) minmax(22rem, 0.66fr);
   background:
@@ -4957,5 +5667,122 @@
   .elite-profile-hero-avatar {
     display: grid;
     justify-items: start;
+  }
+}
+
+/* Reservation detail overrides live at the end so they safely beat older
+   Trips-page responsive rules without changing the accepted list design. */
+@media (max-width: 1080px) {
+  .elite-reservation-hero,
+  .elite-reservation-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .elite-reservation-hero {
+    min-height: auto;
+  }
+
+  .elite-reservation-hero__media {
+    min-height: clamp(18rem, 42vw, 26rem);
+  }
+
+  .elite-reservation-hero__media::after {
+    background: linear-gradient(180deg, transparent 46%, rgba(5, 11, 29, 0.44));
+  }
+
+  .elite-reservation-hero h1 {
+    max-width: 14ch;
+  }
+
+  .elite-reservation-property__facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .elite-trip-card__links {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .elite-trip-card__links a {
+    flex: 1 1 9rem;
+  }
+
+  .elite-reservation-detail {
+    gap: 1rem;
+    padding-bottom: calc(2.5rem + env(safe-area-inset-bottom));
+  }
+
+  .elite-reservation-hero,
+  .elite-reservation-panel,
+  .elite-reservation-itinerary,
+  .elite-reservation-property,
+  .elite-reservation-limitation,
+  .elite-reservation-empty {
+    border-radius: 1.05rem;
+  }
+
+  .elite-reservation-hero__media {
+    min-height: 15rem;
+  }
+
+  .elite-reservation-hero__content {
+    padding: 1rem;
+  }
+
+  .elite-reservation-hero__topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .elite-reservation-hero h1 {
+    font-size: clamp(2.45rem, 12vw, 4rem);
+    max-width: 11.5ch;
+  }
+
+  .elite-reservation-hero__facts,
+  .elite-reservation-property__facts,
+  .elite-reservation-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .elite-reservation-hero__facts {
+    display: grid;
+  }
+
+  .elite-reservation-fact {
+    min-width: 0;
+  }
+
+  .elite-reservation-timeline {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .elite-reservation-timeline i {
+    width: 1px;
+    height: 2.8rem;
+    margin-left: 0.45rem;
+    background: linear-gradient(180deg, rgba(212, 167, 44, 0.92), rgba(23, 37, 84, 0.12));
+  }
+
+  .elite-reservation-actions,
+  .elite-reservation-actions :is(a, button),
+  .elite-reservation-empty a {
+    width: 100%;
+  }
+
+  .elite-reservation-limitation {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .elite-reservation-modal {
+    align-items: end;
+    padding: 0.75rem;
+  }
+
+  .elite-reservation-modal__panel {
+    width: 100%;
   }
 }

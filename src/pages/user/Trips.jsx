@@ -1,4 +1,12 @@
-import { ArrowRight, CalendarDays, CheckCircle2, MapPin, UsersRound } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  MapPin,
+  ShieldAlert,
+  UsersRound,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -27,12 +35,23 @@ const emptyTripGroups = {
  * The card avoids cancellation rules because those must be decided by backend
  * booking state in a later integration pass.
  */
-function TripCard({ prominent = false, previewMode = false, trip }) {
+function TripCard({
+  cancelling = false,
+  onCancelTrip,
+  prominent = false,
+  previewMode = false,
+  trip,
+}) {
   const propertyPath = previewMode ? "/property" : "/user/property";
+  const propertyDetailsPath = `${propertyPath}/${trip.propertyId}`;
+  const reservationDetailsPath =
+    !previewMode && trip.id ? `/user/trips/${trip.id}` : propertyDetailsPath;
+  const canCancelPendingTrip =
+    !previewMode && trip.statusCode === "PENDING" && onCancelTrip;
 
   return (
     <article className={`elite-trip-card${prominent ? " is-prominent" : ""}`}>
-      <Link to={`${propertyPath}/${trip.propertyId}`} className="elite-trip-card__media">
+      <Link to={reservationDetailsPath} className="elite-trip-card__media">
         {trip.image ? (
           <img src={trip.image} alt={trip.imageAlt} loading="lazy" />
         ) : (
@@ -75,13 +94,94 @@ function TripCard({ prominent = false, previewMode = false, trip }) {
 
         <div className="elite-trip-card__footer">
           <span>Ref {trip.reference}</span>
-          <Link to={`${propertyPath}/${trip.propertyId}`}>
-            View trip
-            <ArrowRight size={15} aria-hidden="true" />
-          </Link>
+          <div className="elite-trip-card__links">
+            {trip.propertyId ? (
+              <Link
+                to={propertyDetailsPath}
+                className="elite-trip-card__property-link"
+              >
+                View property
+              </Link>
+            ) : null}
+            <Link to={reservationDetailsPath}>
+              View trip
+              <ArrowRight size={15} aria-hidden="true" />
+            </Link>
+            {canCancelPendingTrip ? (
+              <button
+                type="button"
+                className="elite-trip-card__cancel"
+                disabled={cancelling}
+                onClick={() => onCancelTrip(trip)}
+              >
+                {cancelling ? "Cancelling..." : "Cancel trip"}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
     </article>
+  );
+}
+
+/**
+ * Confirms pending cancellation without using `window.confirm`. The copy makes
+ * clear that the backend preserves the booking row as cancelled history.
+ */
+function CancelTripDialog({
+  error,
+  isCancelling,
+  onClose,
+  onConfirm,
+  trip,
+}) {
+  if (!trip) return null;
+
+  return (
+    <div className="elite-trip-cancel-modal" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-labelledby="trip-cancel-title"
+        aria-modal="true"
+        className="elite-trip-cancel-modal__panel"
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Close cancellation dialog"
+          className="elite-trip-cancel-modal__close"
+          disabled={isCancelling}
+          onClick={onClose}
+        >
+          <X size={17} aria-hidden="true" />
+        </button>
+
+        <span className="elite-trip-cancel-modal__icon">
+          <ShieldAlert size={22} aria-hidden="true" />
+        </span>
+        <p className="elite-user-page-header__eyebrow">Pending reservation</p>
+        <h2 id="trip-cancel-title">Cancel this pending reservation?</h2>
+        <p>
+          This will remove {trip.name} from your active trips. The booking
+          record will remain in your history as cancelled.
+        </p>
+
+        {error ? (
+          <p className="elite-trip-cancel-modal__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="elite-trip-cancel-modal__actions">
+          <button type="button" disabled={isCancelling} onClick={onClose}>
+            Keep trip
+          </button>
+          <button type="button" disabled={isCancelling} onClick={onConfirm}>
+            {isCancelling ? "Cancelling..." : "Cancel reservation"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -135,6 +235,9 @@ export default function Trips({ previewMode = false }) {
     isLoading: !previewMode,
     error: false,
   });
+  const [cancelDialogTrip, setCancelDialogTrip] = useState(null);
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
+  const [cancelError, setCancelError] = useState("");
   const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const { emptyStates, tabs } = userTripsData;
 
@@ -200,6 +303,60 @@ export default function Trips({ previewMode = false }) {
     };
   }, [previewMode]);
 
+  /**
+   * Opens the cancellation confirmation only for backend-confirmed PENDING
+   * trips. Backend ownership and status rules remain authoritative.
+   */
+  const openCancelDialog = (trip) => {
+    if (trip.statusCode !== "PENDING") return;
+
+    setCancelDialogTrip(trip);
+    setCancelError("");
+  };
+
+  /**
+   * Cancels after confirmation and waits for the backend response before
+   * moving the trip out of active itinerary state. This avoids pretending a
+   * cancellation succeeded when the server rejects ownership or status.
+   */
+  const confirmCancelTrip = async () => {
+    if (!cancelDialogTrip?.id) return;
+
+    try {
+      setCancellingBookingId(cancelDialogTrip.id);
+      setCancelError("");
+
+      await bookingService.cancel(cancelDialogTrip.id);
+
+      setProductionTrips((currentGroups) => {
+        const removeBooking = (list) =>
+          list.filter((trip) => String(trip.id) !== String(cancelDialogTrip.id));
+        const cancelledTrip = {
+          ...cancelDialogTrip,
+          status: "Cancelled",
+          statusCode: "CANCELLED",
+          note: "Pending reservation cancelled.",
+        };
+
+        return {
+          upcoming: removeBooking(currentGroups.upcoming),
+          completed: removeBooking(currentGroups.completed),
+          cancelled: [cancelledTrip, ...removeBooking(currentGroups.cancelled)],
+        };
+      });
+
+      setCancelDialogTrip(null);
+    } catch (error) {
+      console.error("Failed to cancel pending trip:", error);
+      setCancelError(
+        error?.response?.data?.message ||
+          "We couldn't cancel this pending reservation."
+      );
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
+
   const presentationState = previewMode
     ? userTripsData.presentationState
     : productionState;
@@ -253,6 +410,8 @@ export default function Trips({ previewMode = false }) {
           {currentTrips.map((trip, index) => (
             <TripCard
               key={trip.id}
+              cancelling={String(cancellingBookingId) === String(trip.id)}
+              onCancelTrip={openCancelDialog}
               prominent={activeTab === "upcoming" && index === 0}
               previewMode={previewMode}
               trip={trip}
@@ -262,6 +421,19 @@ export default function Trips({ previewMode = false }) {
       ) : (
         <SectionEmptyState {...emptyState} />
       )}
+
+      <CancelTripDialog
+        error={cancelError}
+        isCancelling={Boolean(cancellingBookingId)}
+        onClose={() => {
+          if (!cancellingBookingId) {
+            setCancelDialogTrip(null);
+            setCancelError("");
+          }
+        }}
+        onConfirm={confirmCancelTrip}
+        trip={cancelDialogTrip}
+      />
     </section>
   );
 }
