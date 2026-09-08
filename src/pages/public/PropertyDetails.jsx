@@ -124,6 +124,45 @@ function getGalleryImages(property) {
 }
 
 /**
+ * Wraps gallery movement around the real image list. This keeps previous/next
+ * controls predictable without duplicating backend images or inventing media.
+ */
+function getWrappedGalleryIndex(index, imageCount) {
+  if (!imageCount) return 0;
+
+  return ((index % imageCount) + imageCount) % imageCount;
+}
+
+/**
+ * Tracks the user's reduced-motion preference so the carousel can disable
+ * autoplay while still rendering a complete, usable gallery immediately.
+ */
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() => {
+    if (typeof window === "undefined") return false;
+
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    mediaQuery.addEventListener("change", updatePreference);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updatePreference);
+    };
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+/**
  * Returns a compact set of real accommodation facts. Missing values are left
  * out so the page never pretends the backend supplied details it did not.
  */
@@ -801,11 +840,17 @@ export default function PropertyDetails() {
         </button>
 
         {/* =========================================================
-        PROPERTY HEADER
-        Uses only genuine PropertyResponse values so the decision summary stays
-        premium without inventing ratings, awards, or neighborhood claims.
+        PROPERTY INTRO / MASTHEAD
+        Presents backend property metadata before booking actions. Price,
+        location, facts, and review summary are integrated into one editorial
+        masthead instead of isolated dashboard-style cards.
         ========================================================= */}
-        <section className="elite-property-hero" aria-labelledby="property-title">
+        <section
+          className={`elite-property-hero ${
+            propertyFacts.length ? "" : "elite-property-hero--single"
+          }`}
+          aria-labelledby="property-title"
+        >
           <div className="elite-property-hero__content">
             <div className="elite-property-hero__meta">
               {typeLabel ? <span>{typeLabel}</span> : null}
@@ -819,27 +864,59 @@ export default function PropertyDetails() {
               <span>{property.location || "Location not provided"}</span>
             </div>
 
-            <div className="elite-property-hero__facts" aria-label="Stay facts">
-              {propertyFacts.map((fact) => (
-                <PropertyFact key={fact.label} fact={fact} />
-              ))}
+            <div className="elite-property-hero__summary">
+              <div className="elite-property-hero__price">
+                <span>From</span>
+                <strong>{formatPrice(property.pricePerNight)}</strong>
+                <small>per night</small>
+              </div>
+
+              <div className="elite-property-hero__review">
+                <Star size={16} fill="currentColor" aria-hidden="true" />
+                {averageRating
+                  ? `${averageRating.toFixed(1)} from ${reviews.length} ${
+                      reviews.length === 1 ? "review" : "reviews"
+                    }`
+                  : "No reviews yet"}
+              </div>
+            </div>
+
+            <div className="elite-property-hero__actions">
+              <button type="button" onClick={handleShare}>
+                <Share2 size={17} aria-hidden="true" />
+                Share
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleFavorite}
+                disabled={savingFavorite}
+                aria-pressed={saved}
+              >
+                {savingFavorite ? (
+                  <span className="elite-property-spinner" aria-hidden="true" />
+                ) : (
+                  <Heart
+                    size={17}
+                    fill={saved ? "currentColor" : "none"}
+                    aria-hidden="true"
+                  />
+                )}
+                {saved ? "Saved" : "Save"}
+              </button>
             </div>
           </div>
 
-          <div className="elite-property-hero__aside">
-            <p className="elite-property-hero__eyebrow">From</p>
-            <strong>{formatPrice(property.pricePerNight)}</strong>
-            <span>per night</span>
-
-            <div className="elite-property-hero__review">
-              <Star size={16} fill="currentColor" aria-hidden="true" />
-              {averageRating
-                ? `${averageRating.toFixed(1)} from ${reviews.length} ${
-                    reviews.length === 1 ? "review" : "reviews"
-                  }`
-                : "No reviews yet"}
+          {propertyFacts.length ? (
+            <div className="elite-property-hero__aside">
+              <p className="elite-property-hero__eyebrow">Residence notes</p>
+              <div className="elite-property-hero__facts" aria-label="Stay facts">
+                {propertyFacts.map((fact) => (
+                  <PropertyFact key={fact.label} fact={fact} />
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
         </section>
 
         <div
@@ -865,14 +942,23 @@ export default function PropertyDetails() {
         Renders real backend images only. If a listing has no images, the
         fallback is a truthful empty media state, not a production mock photo.
         ========================================================= */}
-        <PropertyGallery images={galleryImages} title={property.title} />
+        <PropertyGallery
+          key={property.id ?? id}
+          images={galleryImages}
+          title={property.title}
+        />
 
         <section className="elite-property-detail__decision-grid">
           <article className="elite-property-detail__main">
+            {/* =========================================================
+            PROPERTY STORY
+            Uses the genuine backend description as the editorial anchor, then
+            lets real facts and amenities support the booking decision.
+            ========================================================= */}
             <section className="elite-property-section elite-property-section--intro">
               <div>
                 <p className="elite-property-section__label">The stay</p>
-                <h2>Designed details, clearly shown.</h2>
+                <h2>Inside the residence</h2>
               </div>
 
               <p>
@@ -930,6 +1016,12 @@ export default function PropertyDetails() {
               )}
             </section>
 
+            {/* =========================================================
+            HOST PRESENTATION
+            Only hostName and initials are rendered because the backend does
+            not currently provide host contact, rating, biography, or response
+            metadata for this PropertyResponse.
+            ========================================================= */}
             <HostSummary property={property} onMessageHost={handleMessageHost} />
 
             <ReviewsSection
@@ -1088,12 +1180,82 @@ function PropertyFact({ fact, large = false }) {
 }
 
 /**
- * Creates the responsive property gallery with one primary image and supporting
- * images. The fallback is intentionally neutral because production must not
- * borrow mock photography when the backend has no images.
+ * Creates the responsive property gallery with one auto-rotating primary image
+ * and larger thumbnail controls. Only the active image is mounted in the main
+ * frame so secondary property photos never sit behind or bleed through it.
  */
 function PropertyGallery({ images, title }) {
-  if (!images.length) {
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [manualNavigationTick, setManualNavigationTick] = useState(0);
+  const [galleryPaused, setGalleryPaused] = useState(false);
+  const [documentHidden, setDocumentHidden] = useState(() => {
+    if (typeof document === "undefined") return false;
+
+    return document.hidden;
+  });
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const imageCount = images.length;
+  const activeIndex = getWrappedGalleryIndex(activeImageIndex, imageCount);
+  const activeImage = images[activeIndex];
+  const hasCarousel = imageCount > 1;
+  const shouldAutoplay =
+    hasCarousel && !galleryPaused && !documentHidden && !prefersReducedMotion;
+
+  useEffect(() => {
+    if (!shouldAutoplay) return undefined;
+
+    /**
+     * The timer depends on active/manual state so a thumbnail or arrow click
+     * restarts the five-second reading window instead of changing immediately.
+     */
+    const intervalId = window.setInterval(() => {
+      setActiveImageIndex((currentIndex) =>
+        getWrappedGalleryIndex(currentIndex + 1, imageCount)
+      );
+    }, 5000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [activeIndex, imageCount, manualNavigationTick, shouldAutoplay]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+
+    /**
+     * Autoplay pauses while the tab is hidden so users do not return to a
+     * gallery that advanced silently in the background.
+     */
+    const handleVisibilityChange = () => {
+      setDocumentHidden(document.hidden);
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  const selectImage = (imageIndex) => {
+    setActiveImageIndex(getWrappedGalleryIndex(imageIndex, imageCount));
+    setManualNavigationTick((tick) => tick + 1);
+  };
+
+  const moveImage = (direction) => {
+    setActiveImageIndex((currentIndex) =>
+      getWrappedGalleryIndex(currentIndex + direction, imageCount)
+    );
+    setManualNavigationTick((tick) => tick + 1);
+  };
+
+  const handleGalleryBlur = (event) => {
+    if (!event.currentTarget.contains(event.relatedTarget)) {
+      setGalleryPaused(false);
+    }
+  };
+
+  if (!imageCount) {
     return (
       <section className="elite-property-gallery elite-property-gallery--empty">
         <ImageIcon size={34} aria-hidden="true" />
@@ -1102,33 +1264,75 @@ function PropertyGallery({ images, title }) {
     );
   }
 
-  const supportingImages = images.slice(1, 5);
-
   return (
     <section
-      className={`elite-property-gallery ${
-        supportingImages.length ? "" : "elite-property-gallery--single"
-      }`}
+      className="elite-property-gallery"
       aria-label={`${title} gallery`}
+      onBlur={handleGalleryBlur}
+      onFocus={() => setGalleryPaused(true)}
+      onMouseEnter={() => setGalleryPaused(true)}
+      onMouseLeave={() => setGalleryPaused(false)}
     >
       <figure className="elite-property-gallery__main">
-        <img src={images[0].src} alt={images[0].alt} />
+        <img
+          key={activeImage.id}
+          className="elite-property-gallery__image"
+          src={activeImage.src}
+          alt={activeImage.alt}
+        />
+
+        {hasCarousel ? (
+          <>
+            <button
+              type="button"
+              className="elite-property-gallery__control elite-property-gallery__control--previous"
+              onClick={() => moveImage(-1)}
+              aria-label="Previous property image"
+            >
+              <ArrowLeft size={18} aria-hidden="true" />
+            </button>
+
+            <button
+              type="button"
+              className="elite-property-gallery__control elite-property-gallery__control--next"
+              onClick={() => moveImage(1)}
+              aria-label="Next property image"
+            >
+              <ArrowRight size={18} aria-hidden="true" />
+            </button>
+
+            <span className="elite-property-gallery__counter">
+              {activeIndex + 1} / {imageCount}
+            </span>
+          </>
+        ) : null}
       </figure>
 
-      {supportingImages.length ? (
-        <div className="elite-property-gallery__supporting">
-          {supportingImages.map((image, index) => (
-            <figure key={image.id} className="elite-property-gallery__tile">
-              <img src={image.src} alt={image.alt} />
+      {hasCarousel ? (
+        <div
+          className="elite-property-gallery__thumbnails"
+          aria-label="Select property image"
+        >
+          {images.map((image, index) => {
+            const isActive = index === activeIndex;
 
-              {index === supportingImages.length - 1 && images.length > 5 ? (
-                <figcaption>
-                  +{images.length - 5} more photo
-                  {images.length - 5 === 1 ? "" : "s"}
-                </figcaption>
-              ) : null}
-            </figure>
-          ))}
+            return (
+              <button
+                key={`thumb-${image.id}`}
+                type="button"
+                className={`elite-property-gallery__thumbnail ${
+                  isActive ? "elite-property-gallery__thumbnail--active" : ""
+                }`}
+                onClick={() => selectImage(index)}
+                aria-current={isActive ? "true" : undefined}
+                aria-label={`${
+                  isActive ? "Current" : "Show"
+                } property image ${index + 1} of ${imageCount}`}
+              >
+                <img src={image.src} alt="" aria-hidden="true" />
+              </button>
+            );
+          })}
         </div>
       ) : null}
     </section>
