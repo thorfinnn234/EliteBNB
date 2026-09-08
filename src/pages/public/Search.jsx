@@ -52,6 +52,16 @@ function matchesPrice(stay, priceFilter) {
   return true;
 }
 
+function getPriceBounds(priceFilter) {
+  if (priceFilter === "under-180") return { maxPrice: 180000 };
+  if (priceFilter === "180-260") {
+    return { minPrice: 180000, maxPrice: 260000 };
+  }
+  if (priceFilter === "260-plus") return { minPrice: 260000 };
+
+  return {};
+}
+
 /**
  * Applies the local Explore filters without mutating the original mock array.
  * Backend search can later replace this function with service response data.
@@ -64,7 +74,9 @@ function filterResults(results, filters) {
     const matchesBedrooms =
       filters.bedrooms === "all" || stay.bedrooms >= Number(filters.bedrooms);
     const matchesRating =
-      filters.rating === "all" || stay.ratingNumber >= Number(filters.rating);
+      filters.rating === "all" ||
+      !stay.hasReviewRating ||
+      stay.ratingNumber >= Number(filters.rating);
     const matchesAmenities = filters.amenities.every((amenity) =>
       stay.amenities.includes(amenity)
     );
@@ -146,20 +158,25 @@ export default function Search({ previewMode = false }) {
       try {
         setProductionState({ isLoading: true, error: false });
 
-        const response = await propertyService.search({
-          destination: initialCriteria.destination,
-          checkIn: initialCriteria.checkIn,
-          checkOut: initialCriteria.checkOut,
-          guests: initialCriteria.guests,
-        });
-        const mappedResults = normalizeApiList(response.data).map(
-          (property, index) => {
-            const fallback =
-              userExploreData.results[index % userExploreData.results.length];
-
-            return mapPropertyToStay(property, fallback, fallback?.variant);
-          }
-        );
+          const priceBounds = getPriceBounds(filters.price);
+          const response = await propertyService.search({
+            ...(initialCriteria.destination
+              ? { location: initialCriteria.destination }
+              : {}),
+            ...(filters.propertyType !== "all"
+              ? { propertyType: filters.propertyType }
+              : {}),
+            ...priceBounds,
+            ...(filters.bedrooms !== "all"
+              ? { bedrooms: Number(filters.bedrooms) }
+              : {}),
+            ...(initialCriteria.guests
+              ? { guests: Number(initialCriteria.guests) }
+              : {}),
+          });
+          const mappedResults = normalizeApiList(response.data).map((property) =>
+            mapPropertyToStay(property)
+          );
 
         if (isMounted) {
           setProductionResults(mappedResults);
@@ -199,10 +216,11 @@ export default function Search({ previewMode = false }) {
       isMounted = false;
     };
   }, [
-    initialCriteria.checkIn,
-    initialCriteria.checkOut,
     initialCriteria.destination,
     initialCriteria.guests,
+    filters.bedrooms,
+    filters.price,
+    filters.propertyType,
     previewMode,
     isUserExplore,
   ]);
@@ -211,7 +229,7 @@ export default function Search({ previewMode = false }) {
     ? userExploreData.presentationState
     : productionState;
   const searchResults = previewMode ? results : productionResults;
-  const heroStay = searchResults[0] ?? results[0];
+  const heroStay = previewMode ? searchResults[0] ?? results[0] : searchResults[0];
   const heroDetails = [
     {
       label: "Destination",
@@ -441,20 +459,22 @@ export default function Search({ previewMode = false }) {
               </select>
             </label>
 
-            <label>
-              Rating
-              <select
-                name="rating"
-                value={filters.rating}
-                onChange={handleFilterChange}
-              >
-                {filterGroups.ratings.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {previewMode ? (
+              <label>
+                Rating
+                <select
+                  name="rating"
+                  value={filters.rating}
+                  onChange={handleFilterChange}
+                >
+                  {filterGroups.ratings.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
           </div>
 
           <div className="elite-explore-amenities" aria-label="Amenities">

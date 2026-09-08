@@ -173,6 +173,11 @@ export default function UserProfile({ previewMode = false, previewUser }) {
     error: "",
     success: "",
   });
+  const [imageStatus, setImageStatus] = useState({
+    isUploading: false,
+    error: "",
+    success: "",
+  });
   const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [preferences, setPreferences] = useState(userProfileData.preferences);
@@ -351,6 +356,50 @@ export default function UserProfile({ previewMode = false, previewUser }) {
     }
   };
 
+  const handleProfileImageChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setImageStatus({
+        isUploading: false,
+        error: "Please choose an image file.",
+        success: "",
+      });
+      return;
+    }
+
+    try {
+      setImageStatus({ isUploading: true, error: "", success: "" });
+      const response = await userProfileService.uploadImage(file);
+      const uploadedProfile = response.data?.profile ?? response.data;
+      const nextProfile = mapUserProfile(uploadedProfile, profile);
+
+      setProfile(nextProfile);
+      setUser?.({
+        ...user,
+        ...uploadedProfile,
+        profileImageUrl: nextProfile.profileImageUrl,
+      });
+      setImageStatus({
+        isUploading: false,
+        error: "",
+        success: "Profile photo updated.",
+      });
+    } catch (error) {
+      console.error("Failed to upload profile image:", error);
+      setImageStatus({
+        isUploading: false,
+        error:
+          error?.response?.data?.message ||
+          "We couldn't update your profile photo.",
+        success: "",
+      });
+    }
+  };
+
   /**
    * Toggles one local preference without persisting it to a fake endpoint.
    */
@@ -399,6 +448,7 @@ export default function UserProfile({ previewMode = false, previewUser }) {
           <div className="elite-profile-hero-avatar">
             <GuestAvatar
               avatarId={selectedAvatarId}
+              imageUrl={previewMode ? "" : profile.profileImageUrl}
               initials={initials}
               label={`${displayName} preview avatar`}
               size="hero"
@@ -415,21 +465,34 @@ export default function UserProfile({ previewMode = false, previewUser }) {
         <div className="elite-profile-identity__avatar-stack">
           <GuestAvatar
             avatarId={selectedAvatarId}
+            imageUrl={previewMode ? "" : profile.profileImageUrl}
             initials={initials}
             label={`${displayName} profile avatar`}
             size="hero"
           />
-          <button
-            type="button"
-            className="elite-avatar-picker__trigger"
-            aria-expanded={isAvatarPickerOpen}
-            aria-controls="elite-profile-avatar-options"
-            onClick={() => setIsAvatarPickerOpen((isOpen) => !isOpen)}
-          >
-            Change avatar
-          </button>
-
-          {isAvatarPickerOpen ? (
+          {previewMode ? (
+            <button
+              type="button"
+              className="elite-avatar-picker__trigger"
+              aria-expanded={isAvatarPickerOpen}
+              aria-controls="elite-profile-avatar-options"
+              onClick={() => setIsAvatarPickerOpen((isOpen) => !isOpen)}
+            >
+              Change avatar
+            </button>
+          ) : (
+            <label className="elite-avatar-picker__trigger">
+              {imageStatus.isUploading ? "Uploading..." : "Upload photo"}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleProfileImageChange}
+                disabled={imageStatus.isUploading}
+                hidden
+              />
+            </label>
+          )}
+          {previewMode && isAvatarPickerOpen ? (
             <div
               className="elite-avatar-picker__grid"
               id="elite-profile-avatar-options"
@@ -438,9 +501,7 @@ export default function UserProfile({ previewMode = false, previewUser }) {
               {avatarOptions.map((avatar) => (
                 <button
                   type="button"
-                  className={
-                    avatar.id === selectedAvatarId ? "is-selected" : ""
-                  }
+                  className={avatar.id === selectedAvatarId ? "is-selected" : ""}
                   key={avatar.id}
                   aria-pressed={avatar.id === selectedAvatarId}
                   onClick={() => handleAvatarSelect(avatar.id)}
@@ -458,9 +519,11 @@ export default function UserProfile({ previewMode = false, previewUser }) {
 
           <p className="elite-avatar-picker__note">
             {previewMode
-              ? "Frontend preview only. Account avatars will need backend support."
-              : "Avatar selection is stored on this device."}
+              ? "Frontend preview only."
+              : "Use a clear image for your account profile."}
           </p>
+          {imageStatus.error ? <p role="alert">{imageStatus.error}</p> : null}
+          {imageStatus.success ? <p role="status">{imageStatus.success}</p> : null}
         </div>
         <div className="elite-profile-identity__copy">
           <p className="elite-user-page-header__eyebrow">Guest profile</p>
@@ -627,17 +690,24 @@ export default function UserProfile({ previewMode = false, previewUser }) {
               </div>
             </div>
 
-            <div className="elite-profile-preferences">
-              {preferences.map((preference) => (
-                <PreferenceToggle
-                  key={preference.id}
-                  description={preference.description}
-                  enabled={preference.enabled}
-                  label={preference.label}
-                  onToggle={() => handlePreferenceToggle(preference.id)}
-                />
-              ))}
-            </div>
+            {previewMode ? (
+              <div className="elite-profile-preferences">
+                {preferences.map((preference) => (
+                  <PreferenceToggle
+                    key={preference.id}
+                    description={preference.description}
+                    enabled={preference.enabled}
+                    label={preference.label}
+                    onToggle={() => handlePreferenceToggle(preference.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="elite-profile-summary">
+                Preferences are available in preview only and are not saved to
+                your account.
+              </p>
+            )}
           </section>
 
           <section className="elite-user-page__surface" data-user-page-reveal>

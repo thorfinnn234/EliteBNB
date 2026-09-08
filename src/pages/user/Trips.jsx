@@ -10,7 +10,9 @@ import UserPageHeader from "../../components/user/UserPageHeader";
 import UserStatusTabs from "../../components/user/UserStatusTabs";
 import { userTripsData } from "../../data/userHomeData";
 import { bookingService } from "../../services/bookingService";
+import { propertyService } from "../../services/propertyService";
 import { groupTripsByStatus } from "../../utils/userBackendMappers";
+import { normalizeApiList } from "../../utils/userBackendMappers";
 import "./UserHome.css";
 import "./UserPages.css";
 
@@ -153,10 +155,33 @@ export default function Trips({ previewMode = false }) {
         setProductionState({ isLoading: true, error: false });
 
         const response = await bookingService.getMine();
+        const bookings = normalizeApiList(response.data);
+        const propertyCache = new Map();
+        const enrichedBookings = await Promise.all(
+          bookings.map(async (booking) => {
+            const propertyId = booking?.propertyId;
+
+            if (!propertyId) return booking;
+
+            if (!propertyCache.has(propertyId)) {
+              propertyCache.set(
+                propertyId,
+                propertyService.getById(propertyId).then(
+                  (propertyResponse) => propertyResponse.data,
+                  () => null
+                )
+              );
+            }
+
+            const property = await propertyCache.get(propertyId);
+
+            return property ? { ...booking, property } : booking;
+          })
+        );
 
         if (!isMounted) return;
 
-        setProductionTrips(groupTripsByStatus(response.data));
+        setProductionTrips(groupTripsByStatus(enrichedBookings));
         setProductionState({ isLoading: false, error: false });
       } catch (error) {
         console.error("Failed to load user trips:", error);

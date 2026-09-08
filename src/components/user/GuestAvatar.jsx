@@ -8,6 +8,7 @@ import { getGuestAvatarOption } from "../../data/guestAvatarData";
  */
 export default function GuestAvatar({
   avatarId,
+  imageUrl = "",
   initials = "EB",
   label,
   size = "medium",
@@ -29,7 +30,8 @@ export default function GuestAvatar({
       }}
       {...accessibilityProps}
     >
-      <svg viewBox="0 0 80 80" focusable="false" aria-hidden="true">
+      {imageUrl ? <img src={imageUrl} alt="" className="elite-guest-avatar__image" /> : null}
+      {!imageUrl ? <svg viewBox="0 0 80 80" focusable="false" aria-hidden="true">
         <rect width="80" height="80" rx="30" fill="var(--guest-avatar-ground)" />
         <path
           d="M18 68C20.8 54.2 29.2 47.2 40 47.2C50.8 47.2 59.2 54.2 62 68H18Z"
@@ -56,10 +58,12 @@ export default function GuestAvatar({
           strokeLinecap="round"
           strokeWidth="2"
         />
-      </svg>
-      <span className="elite-guest-avatar__initials" aria-hidden="true">
-        {initials}
-      </span>
+      </svg> : null}
+      {!imageUrl ? (
+        <span className="elite-guest-avatar__initials" aria-hidden="true">
+          {initials}
+        </span>
+      ) : null}
     </span>
   );
 }

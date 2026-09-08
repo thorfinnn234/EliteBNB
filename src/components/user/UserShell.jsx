@@ -236,6 +236,7 @@ function UserFloatingDock({
   onNavigate,
   onToggleExpanded,
   onLogout,
+  profileImageUrl,
   profileTo,
 }) {
   return (
@@ -307,7 +308,12 @@ function UserFloatingDock({
           <span aria-hidden="true" />
         </button>
         <Link to={profileTo} className="elite-user-dock__profile">
-          <GuestAvatar avatarId={avatarId} initials={initials} size="dock" />
+          <GuestAvatar
+            avatarId={avatarId}
+            imageUrl={profileImageUrl}
+            initials={initials}
+            size="dock"
+          />
           <span className="elite-user-dock__profile-copy">
             <strong>{displayName}</strong>
             <small>Guest account</small>
@@ -336,6 +342,7 @@ function UserTopbar({
   displayName,
   homeTo,
   initials,
+  profileImageUrl,
   profileTo,
   routeLabel,
   searchTo,
@@ -371,7 +378,12 @@ function UserTopbar({
           <Bell size={18} aria-hidden="true" />
         </button>
         <Link to={profileTo} className="elite-user-topbar__profile">
-          <GuestAvatar avatarId={avatarId} initials={initials} size="topbar" />
+          <GuestAvatar
+            avatarId={avatarId}
+            imageUrl={profileImageUrl}
+            initials={initials}
+            size="topbar"
+          />
           <span>
             <strong>{displayName}</strong>
             <small>Profile</small>
@@ -450,6 +462,7 @@ export default function UserShell({
     }
   });
   const effectiveUser = previewUser ?? user;
+  const profileImageUrl = previewMode ? "" : effectiveUser?.profileImageUrl;
   const displayName = getDisplayName(effectiveUser);
   const initials = getInitials(displayName) || "EB";
   const activeRoutePath = previewRoutePath ?? location.pathname;
@@ -729,6 +742,7 @@ export default function UserShell({
         onNavigate={handleNavigationIntent}
         onToggleExpanded={handleDockExpandedToggle}
         onLogout={handleLogout}
+        profileImageUrl={profileImageUrl}
         profileTo={profileTo}
         activeRoutePath={activeRoutePath}
       />
@@ -739,6 +753,7 @@ export default function UserShell({
           displayName={displayName}
           homeTo={homeTo}
           initials={initials}
+          profileImageUrl={profileImageUrl}
           profileTo={profileTo}
           routeLabel={routeLabel}
           searchTo={searchTo}

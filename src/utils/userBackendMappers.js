@@ -109,6 +109,7 @@ export function mapPropertyToStay(property, fallback = {}, variant) {
     location: getPropertyLocation(property, fallback.location),
     propertyType: formatEnumLabel(property?.propertyType, fallback.propertyType),
     rating: ratingNumber ? ratingNumber.toFixed(2).replace(/0$/, "") : fallback.rating,
+    hasReviewRating: Number.isFinite(ratingNumber) && ratingNumber > 0,
     ratingNumber: ratingNumber || fallback.ratingNumber || 0,
     price: formatNaira(priceNumber, fallback.price),
     priceNumber: priceNumber || fallback.priceNumber || 0,
@@ -337,6 +338,8 @@ export function mapUserProfile(profile, fallback = {}) {
       profile?.lastName ?? nameParts.slice(1).join(" ") ?? fallback.lastName ?? "",
     email: profile?.email ?? fallback.email ?? "",
     phone: profile?.phoneNumber ?? profile?.phone ?? fallback.phone ?? "",
+    profileImageUrl:
+      profile?.profileImageUrl ?? fallback.profileImageUrl ?? "",
     role: profile?.role ?? fallback.role ?? "USER",
   };
 }

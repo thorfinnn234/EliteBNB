@@ -1503,6 +1503,12 @@
   height: 100%;
 }
 
+.elite-guest-avatar__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .elite-guest-avatar__initials {
   position: absolute;
   right: 0.12rem;
