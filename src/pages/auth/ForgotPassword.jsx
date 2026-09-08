@@ -25,7 +25,7 @@ export default function ForgotPassword() {
     try {
       await authService.forgotPassword({ email });
       setSuccess(true);
-      
+
       // Redirect to verify reset code page after 2 seconds
       setTimeout(() => {
         navigate(`/verify-reset-code?email=${encodeURIComponent(email)}`);

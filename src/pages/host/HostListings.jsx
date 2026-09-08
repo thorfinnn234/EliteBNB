@@ -43,7 +43,11 @@ export default function HostListings() {
   };
 
   useEffect(() => {
-    loadListings();
+    const loadTimer = window.setTimeout(() => {
+      loadListings();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, []);
 
   const filteredListings = useMemo(() => {

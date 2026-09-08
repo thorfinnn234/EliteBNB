@@ -3,6 +3,20 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import AuthLayout from "../../components/auth/AuthLayout";
 import { authService } from "../../services/authService";
 
+/**
+ * Extracts a readable backend error message while guarding against object
+ * responses that React cannot render directly.
+ */
+function getAuthErrorMessage(error, fallback) {
+  const responseData = error.response?.data;
+
+  return (
+    responseData?.message ||
+    responseData?.error ||
+    (typeof responseData === "string" ? responseData : fallback)
+  );
+}
+
 export default function VerifyEmail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -12,6 +26,9 @@ export default function VerifyEmail() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resendError, setResendError] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,13 +44,37 @@ export default function VerifyEmail() {
 
       navigate("/login");
     } catch (err) {
-      setError(
-        err.response?.data?.message ||
-          err.response?.data ||
-          "Verification failed"
-      );
+      setError(getAuthErrorMessage(err, "Verification failed"));
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Calls the backend resend-verification endpoint for the email in the route.
+   * It disables repeated clicks during the request and leaves the existing
+   * verification form untouched.
+   */
+  const handleResendVerification = async () => {
+    setResendError("");
+    setResendSuccess("");
+
+    if (!email) {
+      setResendError("Email address is missing. Please return to registration.");
+      return;
+    }
+
+    setResendLoading(true);
+
+    try {
+      await authService.resendVerification({ email });
+      setResendSuccess("A new verification code has been sent.");
+    } catch (err) {
+      setResendError(
+        getAuthErrorMessage(err, "Could not resend verification code.")
+      );
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -95,11 +136,25 @@ export default function VerifyEmail() {
         Didn't receive the code?{" "}
         <button
           type="button"
-          className="font-semibold text-[#D4A72C]"
+          disabled={resendLoading || !email}
+          className="font-semibold text-[#D4A72C] disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handleResendVerification}
         >
-          Resend code
+          {resendLoading ? "Sending..." : "Resend code"}
         </button>
       </p>
+
+      {resendSuccess ? (
+        <p className="mt-3 text-center text-sm text-green-700">
+          {resendSuccess}
+        </p>
+      ) : null}
+
+      {resendError ? (
+        <p className="mt-3 text-center text-sm text-[#DC2626]">
+          {resendError}
+        </p>
+      ) : null}
     </AuthLayout>
   );
 }

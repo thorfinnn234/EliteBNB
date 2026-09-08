@@ -1,518 +1,474 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { ArrowRight, PenLine, Star, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  CalendarDays,
-  CheckCircle2,
-  MessageSquareText,
-  RefreshCcw,
-  Star,
-} from "lucide-react";
-
+  ContentSkeleton,
+  SectionEmptyState,
+  SectionErrorState,
+} from "../../components/user/UserFeedbackStates";
+import UserPageHeader from "../../components/user/UserPageHeader";
+import { userReviewsData } from "../../data/userHomeData";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { bookingService } from "../../services/bookingService";
 import { reviewService } from "../../services/reviewService";
+import {
+  mapBookingToReviewPrompt,
+  mapReviewToSubmitted,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
+import "./UserHome.css";
+import "./UserPages.css";
 
-export default function Reviews() {
-  const navigate = useNavigate();
+/**
+ * Renders star icons for submitted reviews without exposing them as controls.
+ */
+function StaticRating({ rating }) {
+  return (
+    <span className="elite-review-rating" aria-label={`${rating} out of 5 stars`}>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <Star
+          size={14}
+          fill={index < rating ? "currentColor" : "none"}
+          key={`rating-${index}`}
+          aria-hidden="true"
+        />
+      ))}
+    </span>
+  );
+}
 
-  const [reviews, setReviews] = useState([]);
-  const [bookings, setBookings] = useState([]);
+/**
+ * Displays one completed review as guest-written travel context.
+ */
+function SubmittedReviewCard({ previewMode = false, review }) {
+  return (
+    <article className="elite-review-card">
+      <img src={review.image} alt={review.imageAlt} loading="lazy" />
+      <div>
+        <div className="elite-review-card__topline">
+          <StaticRating rating={review.rating} />
+          <span>{review.date}</span>
+        </div>
+        <h3>{review.property}</h3>
+        <p className="elite-review-card__location">{review.location}</p>
+        <p className="elite-review-card__text">“{review.text}”</p>
+        <Link to={`${previewMode ? "/property" : "/user/property"}/${review.propertyId}`}>
+          Open stay
+          <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      </div>
+    </article>
+  );
+}
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+/**
+ * Presents a completed stay that can be reviewed in the preview interface.
+ */
+function ReadyReviewCard({ stay, onWriteReview }) {
+  return (
+    <article className="elite-ready-review">
+      <img src={stay.image} alt={stay.imageAlt} loading="lazy" />
+      <div>
+        <p>{stay.completedDate}</p>
+        <h3>{stay.property}</h3>
+        <span>{stay.location}</span>
+      </div>
+      <button type="button" onClick={() => onWriteReview(stay)}>
+        <PenLine size={16} aria-hidden="true" />
+        Write a review
+      </button>
+    </article>
+  );
+}
 
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const [rating, setRating] = useState(5);
-  const [comment, setComment] = useState("");
+/**
+ * Renders an accessible presentation-only review form.
+ * It validates local input and demonstrates submit/loading states without
+ * creating a fake backend review submission.
+ */
+function ReviewModal({
+  error,
+  isSubmitting,
+  onChangeRating,
+  onChangeText,
+  onClose,
+  onSubmit,
+  rating,
+  stay,
+  text,
+}) {
+  if (!stay) return null;
 
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  return (
+    <div
+      className="elite-review-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="elite-review-modal-title"
+    >
+      <div className="elite-review-modal__panel">
+        <button
+          type="button"
+          className="elite-review-modal__close"
+          aria-label="Close review form"
+          onClick={onClose}
+        >
+          <X size={18} aria-hidden="true" />
+        </button>
 
+        <p className="elite-user-page-header__eyebrow">Ready to review</p>
+        <h3 id="elite-review-modal-title">{stay.property}</h3>
+        <p>{stay.location}</p>
+
+        <form onSubmit={onSubmit}>
+          <fieldset>
+            <legend>Your rating</legend>
+            <div className="elite-review-modal__stars">
+              {Array.from({ length: 5 }).map((_, index) => {
+                const starValue = index + 1;
+
+                return (
+                  <button
+                    type="button"
+                    aria-label={`${starValue} star${starValue > 1 ? "s" : ""}`}
+                    aria-pressed={rating === starValue}
+                    className={rating >= starValue ? "is-active" : ""}
+                    key={starValue}
+                    onClick={() => onChangeRating(starValue)}
+                  >
+                    <Star size={20} fill="currentColor" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <label>
+            Review
+            <textarea
+              value={text}
+              onChange={(event) => onChangeText(event.target.value)}
+              rows={5}
+              placeholder="Share what made the stay memorable."
+            />
+          </label>
+
+          {error ? <p className="elite-review-modal__error">{error}</p> : null}
+
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving draft..." : "Submit review"}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Replaces the Reviews placeholder with submitted and ready-to-review states.
+ * The modal demonstrates form validation and submit feedback while leaving
+ * eligibility and persistence to the future backend integration.
+ */
+export default function Reviews({ previewMode = false }) {
+  const [activeStay, setActiveStay] = useState(null);
+  const [formError, setFormError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [productionReviews, setProductionReviews] = useState({
+    readyToReview: [],
+    submitted: [],
+  });
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    error: false,
+  });
+  const submitTimerRef = useRef(null);
+  const { emptyStates } = userReviewsData;
+  const presentationState = previewMode
+    ? userReviewsData.presentationState
+    : productionState;
+  const readyToReview = previewMode
+    ? userReviewsData.readyToReview
+    : productionReviews.readyToReview;
+  const submitted = previewMode
+    ? userReviewsData.submitted
+    : productionReviews.submitted;
+  const heroMemory = submitted[0] ?? readyToReview[0];
+  const heroDetails = [
+    { label: "Written", value: String(submitted.length) },
+    { label: "Ready", value: String(readyToReview.length) },
+    { label: "Tone", value: "Travel journal" },
+  ];
+
+  useBodyScrollLock(Boolean(activeStay));
+
+  /**
+   * Removes any pending preview submit timer when the page unmounts.
+   */
   useEffect(() => {
-    loadData();
+    return () => {
+      window.clearTimeout(submitTimerRef.current);
+    };
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      setError("");
+  /**
+   * Lets keyboard users dismiss the modal with Escape.
+   */
+  useEffect(() => {
+    if (!activeStay) return undefined;
 
-      const [reviewsResult, bookingsResult] =
-        await Promise.allSettled([
-          reviewService.getMine(),
-          bookingService.getMine(),
-        ]);
-
-      if (reviewsResult.status === "fulfilled") {
-        setReviews(reviewsResult.value.data || []);
-      } else if (reviewsResult.reason?.response?.status === 404) {
-        setReviews([]);
-      } else {
-        throw reviewsResult.reason;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setActiveStay(null);
       }
+    };
 
-      if (bookingsResult.status === "fulfilled") {
-        setBookings(bookingsResult.value.data || []);
-      } else {
-        throw bookingsResult.reason;
-      }
-    } catch (err) {
-      console.error("Failed to load reviews:", err);
+    window.addEventListener("keydown", handleKeyDown);
 
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't load your reviews right now."
-      );
-    } finally {
-      setLoading(false);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeStay]);
+
+  /**
+   * Loads submitted reviews and completed bookings for production routes.
+   * The backend remains responsible for final eligibility; this maps available
+   * responses into the accepted review/journal composition.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
     }
+
+    let isMounted = true;
+
+    async function loadReviews() {
+      setProductionState({ isLoading: true, error: false });
+
+      const [reviewsResult, bookingsResult] = await Promise.allSettled([
+        reviewService.getMine(),
+        bookingService.getMine(),
+      ]);
+
+      if (!isMounted) return;
+
+      const nextSubmitted =
+        reviewsResult.status === "fulfilled"
+          ? normalizeApiList(reviewsResult.value.data).map((review, index) =>
+              mapReviewToSubmitted(review, userReviewsData.submitted[index])
+            )
+          : [];
+      const nextReadyToReview =
+        bookingsResult.status === "fulfilled"
+          ? normalizeApiList(bookingsResult.value.data)
+              .filter(
+                (booking) =>
+                  String(booking?.status || "").toUpperCase() === "COMPLETED"
+              )
+              .map((booking, index) =>
+                mapBookingToReviewPrompt(
+                  booking,
+                  userReviewsData.readyToReview[index]
+                )
+              )
+          : [];
+
+      setProductionReviews({
+        readyToReview: nextReadyToReview,
+        submitted: nextSubmitted,
+      });
+      setProductionState({
+        isLoading: false,
+        error:
+          reviewsResult.status === "rejected" &&
+          bookingsResult.status === "rejected",
+      });
+    }
+
+    loadReviews();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  /**
+   * Opens the local review form and clears previous validation state.
+   */
+  const handleOpenReview = (stay) => {
+    setActiveStay(stay);
+    setFormError("");
+    setIsSubmitting(false);
+    setRating(0);
+    setReviewText("");
   };
 
-  const reviewedBookingIds = useMemo(() => {
-    return new Set(
-      reviews.map((review) => review.bookingId)
-    );
-  }, [reviews]);
-
-  const reviewableBookings = useMemo(() => {
-    return bookings.filter(
-      (booking) =>
-        booking.status === "COMPLETED" &&
-        !reviewedBookingIds.has(booking.id)
-    );
-  }, [bookings, reviewedBookingIds]);
-
-  const handleOpenReview = (booking) => {
-    setSelectedBooking(booking);
-    setRating(5);
-    setComment("");
-    setSubmitError("");
-  };
-
+  /**
+   * Closes the modal and resets the local presentation form.
+   */
   const handleCloseReview = () => {
-    if (submitting) return;
-
-    setSelectedBooking(null);
-    setRating(5);
-    setComment("");
-    setSubmitError("");
+    setActiveStay(null);
+    setFormError("");
+    setIsSubmitting(false);
   };
 
-  const handleSubmitReview = async () => {
-    if (!selectedBooking) return;
+  /**
+   * Validates the review form locally. Preview mode shows the accepted visual
+   * submit state; production mode posts to the incoming review service.
+   */
+  const handleSubmitReview = async (event) => {
+    event.preventDefault();
 
-    if (!comment.trim()) {
-      setSubmitError("Please write a short review.");
+    if (!rating) {
+      setFormError("Choose a rating before submitting.");
+      return;
+    }
+
+    if (reviewText.trim().length < 20) {
+      setFormError("Write at least 20 characters about the stay.");
+      return;
+    }
+
+    setFormError("");
+    setIsSubmitting(true);
+
+    if (previewMode) {
+      submitTimerRef.current = window.setTimeout(() => {
+        setIsSubmitting(false);
+        setActiveStay(null);
+      }, 450);
       return;
     }
 
     try {
-      setSubmitting(true);
-      setSubmitError("");
-
       const response = await reviewService.create({
-        bookingId: selectedBooking.id,
+        bookingId: activeStay.bookingId ?? activeStay.id,
+        propertyId: activeStay.propertyId,
         rating,
-        comment: comment.trim(),
+        comment: reviewText.trim(),
+      });
+      const submittedReview = mapReviewToSubmitted(response.data, {
+        ...activeStay,
+        rating,
+        text: reviewText.trim(),
       });
 
-      setReviews((current) => [
-        response.data,
-        ...current,
-      ]);
-
-      handleCloseReview();
-    } catch (err) {
-      console.error("Failed to submit review:", err);
-
-      setSubmitError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
+      setProductionReviews((currentReviews) => ({
+        readyToReview: currentReviews.readyToReview.filter(
+          (stay) => stay.id !== activeStay.id
+        ),
+        submitted: [submittedReview, ...currentReviews.submitted],
+      }));
+      setActiveStay(null);
+    } catch (error) {
+      console.error("Failed to submit review:", error);
+      setFormError(
+        error?.response?.data?.message ||
+          error?.response?.data ||
           "We couldn't submit your review."
       );
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
-  const formatDate = (value) => {
-    if (!value) return "";
-
-    return new Intl.DateTimeFormat("en-NG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(value));
-  };
-
   return (
-    <main className="min-h-screen bg-[#FAF9F6]">
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-        {/* HEADER */}
-        <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4A72C]">
-              Your experience
-            </p>
+    <section className="elite-user-page elite-user-reviews" data-user-page>
+      <UserPageHeader
+        eyebrow="Reviews"
+        tone="memory"
+        signature="STORIES"
+        detailItems={heroDetails}
+        title="Stories from your stays, kept in your own words."
+        description="Reviews become a quiet travel journal here: what you wrote, what is ready to capture, and what should shape the next recommendation."
+        media={
+          heroMemory ? (
+            <figure className="elite-review-hero-memory">
+              <img
+                src={heroMemory.image}
+                alt=""
+                loading="lazy"
+              />
+              <figcaption>
+                <span>{heroMemory.location}</span>
+                <strong>
+                  {heroMemory.property ?? heroMemory.propertyName}
+                </strong>
+              </figcaption>
+            </figure>
+          ) : null
+        }
+      />
 
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#172554] sm:text-4xl">
-              Reviews & Ratings
-            </h1>
-
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#64748B]">
-              Share feedback about completed stays and
-              revisit reviews you've already written.
-            </p>
-          </div>
-
-          {!loading && (
-            <button
-              type="button"
-              onClick={loadData}
-              className="flex w-fit items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-semibold text-[#172554] transition hover:border-[#D4A72C]"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh
-            </button>
-          )}
-        </section>
-
-        {/* LOADING */}
-        {loading && (
-          <section className="mt-8 space-y-5">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="rounded-3xl border border-[#E5E7EB] bg-white p-6"
-              >
-                <div className="h-5 w-1/3 animate-pulse rounded bg-[#E5E7EB]" />
-                <div className="mt-4 h-4 w-2/3 animate-pulse rounded bg-[#E5E7EB]" />
-                <div className="mt-3 h-4 w-1/2 animate-pulse rounded bg-[#E5E7EB]" />
+      {presentationState.isLoading ? (
+        <ContentSkeleton count={3} />
+      ) : presentationState.error ? (
+        <SectionErrorState
+          title="We couldn't load your reviews."
+          description="Try again shortly."
+        />
+      ) : (
+        <div className="elite-reviews-layout">
+          <section className="elite-user-page__surface" data-user-page-reveal>
+            <div className="elite-user-section-heading">
+              <div>
+                <p className="elite-user-section-heading__eyebrow">
+                  Your reviews
+                </p>
+                <h2>Shared after checkout</h2>
               </div>
-            ))}
-          </section>
-        )}
-
-        {/* ERROR */}
-        {!loading && error && (
-          <section className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
-            <h2 className="text-xl font-extrabold text-red-700">
-              Unable to load reviews
-            </h2>
-
-            <p className="mt-2 text-sm text-red-600">
-              {String(error)}
-            </p>
-
-            <button
-              type="button"
-              onClick={loadData}
-              className="mt-5 rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white"
-            >
-              Try again
-            </button>
-          </section>
-        )}
-
-        {!loading && !error && (
-          <>
-            {/* ELIGIBLE BOOKINGS */}
-            <section className="mt-8">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D4A72C]">
-                    Ready for feedback
-                  </p>
-
-                  <h2 className="mt-1 text-2xl font-extrabold text-[#172554]">
-                    Stays you can review
-                  </h2>
-                </div>
-
-                <span className="text-sm text-[#64748B]">
-                  {reviewableBookings.length}
-                </span>
-              </div>
-
-              {reviewableBookings.length === 0 ? (
-                <div className="mt-5 rounded-3xl border border-[#E5E7EB] bg-white p-8 text-center">
-                  <CheckCircle2 className="mx-auto h-8 w-8 text-[#D4A72C]" />
-
-                  <h3 className="mt-4 text-lg font-extrabold text-[#172554]">
-                    You're all caught up
-                  </h3>
-
-                  <p className="mt-2 text-sm text-[#64748B]">
-                    Completed stays that haven't been reviewed
-                    will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                  {reviewableBookings.map((booking) => (
-                    <article
-                      key={booking.id}
-                      className="rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-sm"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wide text-[#D4A72C]">
-                            Completed stay
-                          </p>
-
-                          <h3 className="mt-2 text-xl font-extrabold text-[#172554]">
-                            {booking.propertyTitle}
-                          </h3>
-                        </div>
-
-                        <div className="rounded-xl bg-[#FFF8E1] p-3">
-                          <CalendarDays className="h-5 w-5 text-[#D4A72C]" />
-                        </div>
-                      </div>
-
-                      <div className="mt-5 flex flex-wrap gap-4 text-sm text-[#64748B]">
-                        <span>
-                          {formatDate(booking.checkIn)}
-                        </span>
-
-                        <span>→</span>
-
-                        <span>
-                          {formatDate(booking.checkOut)}
-                        </span>
-                      </div>
-
-                      <div className="mt-6 flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleOpenReview(booking)
-                          }
-                          className="rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#1E3A8A]"
-                        >
-                          Leave review
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            navigate(
-                              `/user/property/${booking.propertyId}`
-                            )
-                          }
-                          className="rounded-xl border border-[#E5E7EB] bg-white px-5 py-2.5 text-sm font-bold text-[#172554] transition hover:border-[#D4A72C]"
-                        >
-                          View property
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* EXISTING REVIEWS */}
-            <section className="mt-12">
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D4A72C]">
-                    Your feedback
-                  </p>
-
-                  <h2 className="mt-1 text-2xl font-extrabold text-[#172554]">
-                    Reviews you've written
-                  </h2>
-                </div>
-
-                <span className="text-sm text-[#64748B]">
-                  {reviews.length}
-                </span>
-              </div>
-
-              {reviews.length === 0 ? (
-                <div className="mt-5 rounded-3xl border border-[#E5E7EB] bg-white px-6 py-14 text-center">
-                  <MessageSquareText className="mx-auto h-8 w-8 text-[#D4A72C]" />
-
-                  <h3 className="mt-4 text-xl font-extrabold text-[#172554]">
-                    No reviews yet
-                  </h3>
-
-                  <p className="mt-2 text-sm text-[#64748B]">
-                    Your reviews will appear here after you
-                    complete a stay and share your feedback.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-5 space-y-5">
-                  {reviews.map((review) => (
-                    <article
-                      key={review.id}
-                      className="rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-sm"
-                    >
-                      <div className="flex flex-col justify-between gap-4 sm:flex-row">
-                        <div>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/user/property/${review.propertyId}`
-                              )
-                            }
-                            className="text-left"
-                          >
-                            <h3 className="text-xl font-extrabold text-[#172554] transition hover:text-[#D4A72C]">
-                              {review.propertyTitle}
-                            </h3>
-                          </button>
-
-                          <p className="mt-2 text-xs text-[#94A3B8]">
-                            Reviewed {formatDate(review.createdAt)}
-                          </p>
-                        </div>
-
-                        <StarRating rating={review.rating} />
-                      </div>
-
-                      <p className="mt-5 leading-7 text-[#475569]">
-                        {review.comment}
-                      </p>
-
-                      {review.hostResponse && (
-                        <div className="mt-5 rounded-2xl bg-[#F8FAFC] p-5">
-                          <p className="text-xs font-bold uppercase tracking-wide text-[#D4A72C]">
-                            Host response
-                          </p>
-
-                          <p className="mt-2 text-sm leading-6 text-[#475569]">
-                            {review.hostResponse}
-                          </p>
-                        </div>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
-        )}
-      </div>
-
-      {/* REVIEW MODAL */}
-      {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0F172A]/60 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-7">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D4A72C]">
-              Rate your stay
-            </p>
-
-            <h2 className="mt-2 text-2xl font-extrabold text-[#172554]">
-              {selectedBooking.propertyTitle}
-            </h2>
-
-            <p className="mt-2 text-sm text-[#64748B]">
-              How was your EliteBNB experience?
-            </p>
-
-            {/* STARS */}
-            <div className="mt-6">
-              <p className="text-sm font-bold text-[#172554]">
-                Your rating
-              </p>
-
-              <div className="mt-3 flex gap-2">
-                {[1, 2, 3, 4, 5].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setRating(value)}
-                    className="transition hover:scale-110"
-                    aria-label={`${value} star rating`}
-                  >
-                    <Star
-                      className={`h-8 w-8 ${
-                        value <= rating
-                          ? "fill-[#D4A72C] text-[#D4A72C]"
-                          : "text-[#CBD5E1]"
-                      }`}
-                    />
-                  </button>
+            </div>
+            {submitted.length ? (
+              <div className="elite-review-list">
+                {submitted.map((review) => (
+                  <SubmittedReviewCard
+                    key={review.id}
+                    previewMode={previewMode}
+                    review={review}
+                  />
                 ))}
               </div>
-            </div>
-
-            {/* COMMENT */}
-            <div className="mt-6">
-              <label className="text-sm font-bold text-[#172554]">
-                Tell us about your stay
-              </label>
-
-              <textarea
-                value={comment}
-                onChange={(e) =>
-                  setComment(e.target.value)
-                }
-                maxLength={1500}
-                rows={5}
-                placeholder="What did you enjoy? How was the property and host?"
-                className="mt-3 w-full resize-none rounded-2xl border border-[#E5E7EB] p-4 text-sm text-[#111827] outline-none transition placeholder:text-[#94A3B8] focus:border-[#D4A72C]"
-              />
-
-              <p className="mt-2 text-right text-xs text-[#94A3B8]">
-                {comment.length}/1500
-              </p>
-            </div>
-
-            {submitError && (
-              <p className="mt-3 text-sm font-medium text-red-600">
-                {String(submitError)}
-              </p>
+            ) : (
+              <SectionEmptyState {...emptyStates.submitted} />
             )}
+          </section>
 
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleCloseReview}
-                className="rounded-xl border border-[#E5E7EB] px-5 py-2.5 text-sm font-bold text-[#64748B] transition hover:text-[#172554] disabled:opacity-50"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={handleSubmitReview}
-                className="min-w-[130px] rounded-xl bg-[#D4A72C] px-5 py-2.5 text-sm font-extrabold text-[#172554] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
-              >
-                {submitting
-                  ? "Submitting..."
-                  : "Submit review"}
-              </button>
+          <aside className="elite-user-page__surface" data-user-page-reveal>
+            <div className="elite-user-section-heading">
+              <div>
+                <p className="elite-user-section-heading__eyebrow">
+                  Ready to review
+                </p>
+                <h2>Recently completed</h2>
+              </div>
             </div>
-          </div>
+            {readyToReview.length ? (
+              <div className="elite-ready-review-list">
+                {readyToReview.map((stay) => (
+                  <ReadyReviewCard
+                    key={stay.id}
+                    onWriteReview={handleOpenReview}
+                    stay={stay}
+                  />
+                ))}
+              </div>
+            ) : (
+              <SectionEmptyState {...emptyStates.readyToReview} />
+            )}
+          </aside>
         </div>
       )}
-    </main>
-  );
-}
 
-function StarRating({ rating }) {
-  return (
-    <div className="flex items-center gap-1">
-      {[1, 2, 3, 4, 5].map((value) => (
-        <Star
-          key={value}
-          className={`h-4 w-4 ${
-            value <= rating
-              ? "fill-[#D4A72C] text-[#D4A72C]"
-              : "text-[#CBD5E1]"
-          }`}
-        />
-      ))}
-
-      <span className="ml-2 text-sm font-bold text-[#172554]">
-        {rating}/5
-      </span>
-    </div>
+      <ReviewModal
+        error={formError}
+        isSubmitting={isSubmitting}
+        onChangeRating={setRating}
+        onChangeText={setReviewText}
+        onClose={handleCloseReview}
+        onSubmit={handleSubmitReview}
+        rating={rating}
+        stay={activeStay}
+        text={reviewText}
+      />
+    </section>
   );
 }

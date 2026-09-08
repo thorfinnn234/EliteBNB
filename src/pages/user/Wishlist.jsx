@@ -1,335 +1,268 @@
+import { ArrowRight, Heart, MapPin, Star, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
-  Bath,
-  BedDouble,
-  Heart,
-  MapPin,
-  RefreshCcw,
-  Trash2,
-  Users,
-} from "lucide-react";
-
+  ContentSkeleton,
+  SectionEmptyState,
+  SectionErrorState,
+} from "../../components/user/UserFeedbackStates";
+import UserPageHeader from "../../components/user/UserPageHeader";
+import UserStayCard from "../../components/user/UserStayCard";
+import { userWishlistData } from "../../data/userHomeData";
 import { favoriteService } from "../../services/favoriteService";
+import {
+  mapFavoriteToStay,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
+import "./UserHome.css";
+import "./UserPages.css";
 
-export default function Wishlist() {
-  const navigate = useNavigate();
+/**
+ * Highlights one saved property as the emotional anchor of the collection.
+ * Production routes can remove the stay through the favorite service, while
+ * preview mode keeps the same interaction safely presentational.
+ */
+function FeaturedSavedStay({ onRemove, previewMode, removingId, stay }) {
+  const propertyPath = previewMode ? "/property" : "/user/property";
 
-  const [favorites, setFavorites] = useState([]);
-  const [loading, setLoading] = useState(true);
+  return (
+    <article className="elite-saved-feature" data-user-page-reveal>
+      <Link to={`${propertyPath}/${stay.id}`} className="elite-saved-feature__media">
+        <img src={stay.image} alt={stay.imageAlt} loading="lazy" />
+        <span aria-hidden="true" />
+      </Link>
+
+      <div className="elite-saved-feature__content">
+        <p className="elite-user-page-header__eyebrow">Saved for later</p>
+        <p className="elite-saved-feature__location">
+          <MapPin size={15} aria-hidden="true" />
+          {stay.location}
+        </p>
+        <h3>{stay.name}</h3>
+        <p>{stay.descriptor}</p>
+        <div className="elite-saved-feature__meta">
+          <span>
+            <Star size={15} fill="currentColor" aria-hidden="true" />
+            {stay.rating}
+          </span>
+          <strong>
+            {stay.price}
+            <small>{stay.qualifier}</small>
+          </strong>
+        </div>
+        <div className="elite-saved-feature__actions">
+          <Link to={`${propertyPath}/${stay.id}`}>
+            Open stay
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+          <button
+            type="button"
+            aria-label={`Remove ${stay.name} from saved stays`}
+            disabled={removingId === stay.id}
+            onClick={() => onRemove(stay)}
+          >
+            <X size={16} aria-hidden="true" />
+            {removingId === stay.id ? "Removing..." : "Remove"}
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Shows a saved stay inside the broader collection grid.
+ * The remove affordance calls the favorite service in production and remains
+ * safely inert in DEV preview mode.
+ */
+function SavedCollectionCard({ onRemove, previewMode, removingId, stay }) {
+  return (
+    <div className={`elite-saved-card elite-saved-card--${stay.variant ?? "standard"}`}>
+      <UserStayCard
+        favoriteLoading={removingId === stay.id}
+        propertyPath={previewMode ? "/property" : "/user/property"}
+        isSaved
+        onToggleFavorite={() => onRemove(stay)}
+        stay={stay}
+        variant={stay.variant}
+      />
+      <button
+        type="button"
+        className="elite-saved-card__remove"
+        aria-label={`Remove ${stay.name} from saved stays`}
+        disabled={removingId === stay.id}
+        onClick={() => onRemove(stay)}
+      >
+        <Heart size={15} fill="currentColor" aria-hidden="true" />
+        {removingId === stay.id ? "Removing" : "Saved"}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Replaces the Wishlist placeholder with a visual saved-stays collection.
+ * Preview mode only adjusts recovery links; the saved data remains isolated
+ * presentation content while production routes load favorite-service data.
+ */
+export default function Wishlist({ previewMode = false }) {
+  const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
   const [removingId, setRemovingId] = useState(null);
-  const [error, setError] = useState("");
+  const [favoriteError, setFavoriteError] = useState("");
+  const [productionStays, setProductionStays] = useState([]);
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    error: false,
+  });
 
+  /**
+   * Loads the real favorite list for production routes while preserving the
+   * isolated mock collection for DEV preview.
+   */
   useEffect(() => {
-    loadWishlist();
-  }, []);
-
-  const loadWishlist = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await favoriteService.getMine();
-
-      setFavorites(response.data || []);
-    } catch (err) {
-      console.error("Failed to load wishlist:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't load your wishlist right now."
-      );
-    } finally {
-      setLoading(false);
+    if (previewMode) {
+      return undefined;
     }
+
+    let isMounted = true;
+
+    async function loadFavorites() {
+      try {
+        setProductionState({ isLoading: true, error: false });
+
+        const response = await favoriteService.getMine();
+        const favorites = normalizeApiList(response.data).map(
+          (favorite, index) =>
+            mapFavoriteToStay(
+              favorite,
+              userWishlistData.stays[index],
+              userWishlistData.stays[index]?.variant
+            )
+        );
+
+        if (isMounted) {
+          setProductionStays(favorites);
+          setProductionState({ isLoading: false, error: false });
+        }
+      } catch (error) {
+        console.error("Failed to load saved stays:", error);
+
+        if (isMounted) {
+          setProductionStays([]);
+          setProductionState({ isLoading: false, error: true });
+        }
+      }
+    }
+
+    loadFavorites();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  const { emptyState } = userWishlistData;
+  const presentationState = previewMode
+    ? userWishlistData.presentationState
+    : productionState;
+  const stays = previewMode ? userWishlistData.stays : productionStays;
+  const featuredSavedStay = previewMode
+    ? userWishlistData.featuredSavedStay
+    : productionStays[0] ?? null;
+  const heroDetails = [
+    { label: "Saved stays", value: String(stays.length) },
+    {
+      label: "Featured",
+      value: featuredSavedStay?.location ?? "Collection pending",
+    },
+    { label: "Mood", value: "Private collection" },
+  ];
+  const resolvedEmptyState = {
+    ...emptyState,
+    actionTo: searchPath,
   };
 
-  const removeFavorite = async (propertyId) => {
+  /**
+   * Removes a saved property through the real favorite service in production.
+   * Preview mode keeps the button presentational so it cannot mutate backend
+   * or auth state during visual review.
+   */
+  const handleRemoveFavorite = async (stay) => {
+    if (previewMode) return;
+
     try {
-      setRemovingId(propertyId);
+      setRemovingId(stay.id);
+      setFavoriteError("");
+      await favoriteService.remove(stay.propertyId ?? stay.id);
 
-      await favoriteService.remove(propertyId);
-
-      setFavorites((current) =>
-        current.filter(
-          (favorite) => favorite.propertyId !== propertyId
-        )
+      setProductionStays((currentStays) =>
+        currentStays.filter((currentStay) => currentStay.id !== stay.id)
       );
-    } catch (err) {
-      console.error("Failed to remove favorite:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't remove this property."
+    } catch (error) {
+      console.error("Failed to remove saved stay:", error);
+      setFavoriteError(
+        error?.response?.data?.message ||
+          error?.response?.data ||
+          "We couldn't update your saved stays."
       );
     } finally {
       setRemovingId(null);
     }
   };
 
-  const formatPrice = (price) =>
-    new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(price || 0);
-
   return (
-    <main className="min-h-screen bg-[#FAF9F6]">
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-        {/* HEADER */}
-        <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4A72C]">
-              Saved stays
-            </p>
+    <section className="elite-user-page elite-user-saved" data-user-page>
+      <UserPageHeader
+        eyebrow="Saved"
+        tone="collection"
+        signature="PRIVATE"
+        detailItems={heroDetails}
+        title="Your private collection."
+        description="Layered stays, saved for the moment when the right dates and the right reason arrive together."
+        media={
+          featuredSavedStay ? (
+            <img src={featuredSavedStay.image} alt="" loading="lazy" />
+          ) : null
+        }
+      />
 
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#172554] sm:text-4xl">
-              Wishlist
-            </h1>
+      {favoriteError ? (
+        <p className="elite-user-feedback elite-user-feedback--error" role="alert">
+          {String(favoriteError)}
+        </p>
+      ) : null}
 
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#64748B]">
-              Keep your favourite EliteBNB properties in one place
-              and come back whenever you're ready to book.
-            </p>
-          </div>
+      {presentationState.isLoading ? (
+        <ContentSkeleton count={4} />
+      ) : presentationState.error ? (
+        <SectionErrorState
+          title="We couldn't load saved stays."
+          description="Try again shortly or continue exploring."
+        />
+      ) : stays.length ? (
+        <>
+          <FeaturedSavedStay
+            onRemove={handleRemoveFavorite}
+            previewMode={previewMode}
+            removingId={removingId}
+            stay={featuredSavedStay}
+          />
 
-          {!loading && (
-            <button
-              type="button"
-              onClick={loadWishlist}
-              className="flex w-fit items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-semibold text-[#172554] transition hover:border-[#D4A72C]"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh
-            </button>
-          )}
-        </section>
-
-        {/* COUNT */}
-        {!loading && !error && favorites.length > 0 && (
-          <div className="mt-7 flex items-center gap-2 text-sm text-[#64748B]">
-            <Heart className="h-4 w-4 fill-[#D4A72C] text-[#D4A72C]" />
-
-            <span>
-              {favorites.length} saved{" "}
-              {favorites.length === 1 ? "property" : "properties"}
-            </span>
-          </div>
-        )}
-
-        {/* LOADING */}
-        {loading && (
-          <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <div
-                key={index}
-                className="overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white"
-              >
-                <div className="h-56 animate-pulse bg-[#E5E7EB]" />
-
-                <div className="p-5">
-                  <div className="h-6 w-2/3 animate-pulse rounded bg-[#E5E7EB]" />
-                  <div className="mt-3 h-4 w-1/2 animate-pulse rounded bg-[#E5E7EB]" />
-                  <div className="mt-6 h-10 animate-pulse rounded-xl bg-[#F1F5F9]" />
-                </div>
-              </div>
+          <div className="elite-saved-grid" data-user-page-reveal>
+            {stays.map((stay) => (
+              <SavedCollectionCard
+                key={stay.id}
+                onRemove={handleRemoveFavorite}
+                previewMode={previewMode}
+                removingId={removingId}
+                stay={stay}
+              />
             ))}
-          </section>
-        )}
-
-        {/* ERROR */}
-        {!loading && error && (
-          <section className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
-            <h2 className="text-xl font-extrabold text-red-700">
-              Unable to load wishlist
-            </h2>
-
-            <p className="mt-2 text-sm text-red-600">
-              {String(error)}
-            </p>
-
-            <button
-              type="button"
-              onClick={loadWishlist}
-              className="mt-5 rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white"
-            >
-              Try again
-            </button>
-          </section>
-        )}
-
-        {/* EMPTY */}
-        {!loading && !error && favorites.length === 0 && (
-          <section className="mt-8 rounded-3xl border border-[#E5E7EB] bg-white px-6 py-16 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFF8E1]">
-              <Heart className="h-8 w-8 text-[#D4A72C]" />
-            </div>
-
-            <h2 className="mt-5 text-2xl font-extrabold text-[#172554]">
-              Your wishlist is empty
-            </h2>
-
-            <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#64748B]">
-              Save properties you love and they'll appear here for
-              easy access later.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => navigate("/user/home")}
-              className="mt-6 rounded-xl bg-[#D4A72C] px-6 py-3 text-sm font-extrabold text-[#172554] transition hover:opacity-90"
-            >
-              Explore stays
-            </button>
-          </section>
-        )}
-
-        {/* PROPERTY GRID */}
-        {!loading && !error && favorites.length > 0 && (
-          <section className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {favorites.map((favorite) => (
-              <article
-                key={favorite.id}
-                className="group overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg"
-              >
-                {/* IMAGE */}
-                <div className="relative h-56 overflow-hidden bg-[#E5E7EB]">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        `/user/property/${favorite.propertyId}`
-                      )
-                    }
-                    className="h-full w-full"
-                  >
-                    {favorite.coverImageUrl ? (
-                      <img
-                        src={favorite.coverImageUrl}
-                        alt={favorite.propertyTitle}
-                        className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#64748B]">
-                        No property image
-                      </div>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={removingId === favorite.propertyId}
-                    onClick={() =>
-                      removeFavorite(favorite.propertyId)
-                    }
-                    className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-md transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-                    aria-label="Remove from wishlist"
-                  >
-                    {removingId === favorite.propertyId ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#172554] border-t-transparent" />
-                    ) : (
-                      <Heart className="h-5 w-5 fill-[#D4A72C] text-[#D4A72C]" />
-                    )}
-                  </button>
-
-                  <span className="absolute bottom-4 left-4 rounded-full bg-[#172554]/90 px-3 py-1.5 text-xs font-bold text-white backdrop-blur">
-                    {favorite.propertyType
-                      ?.replaceAll("_", " ")
-                      .toLowerCase()
-                      .replace(/\b\w/g, (letter) =>
-                        letter.toUpperCase()
-                      )}
-                  </span>
-                </div>
-
-                {/* CONTENT */}
-                <div className="p-5">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        `/user/property/${favorite.propertyId}`
-                      )
-                    }
-                    className="block w-full text-left"
-                  >
-                    <h2 className="truncate text-xl font-extrabold text-[#172554]">
-                      {favorite.propertyTitle}
-                    </h2>
-                  </button>
-
-                  <p className="mt-2 flex items-center gap-1.5 text-sm text-[#64748B]">
-                    <MapPin className="h-4 w-4 shrink-0 text-[#D4A72C]" />
-                    <span className="truncate">
-                      {favorite.location}
-                    </span>
-                  </p>
-
-                  {/* DETAILS */}
-                  <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-y border-[#F1F5F9] py-4 text-xs font-semibold text-[#64748B]">
-                    <span className="flex items-center gap-1.5">
-                      <BedDouble className="h-4 w-4 text-[#D4A72C]" />
-                      {favorite.bedrooms}{" "}
-                      {favorite.bedrooms === 1 ? "bed" : "beds"}
-                    </span>
-
-                    <span className="flex items-center gap-1.5">
-                      <Bath className="h-4 w-4 text-[#D4A72C]" />
-                      {favorite.bathrooms}{" "}
-                      {favorite.bathrooms === 1 ? "bath" : "baths"}
-                    </span>
-
-                    <span className="flex items-center gap-1.5">
-                      <Users className="h-4 w-4 text-[#D4A72C]" />
-                      {favorite.maxGuests} guests
-                    </span>
-                  </div>
-
-                  {/* PRICE */}
-                  <div className="mt-5 flex items-end justify-between gap-4">
-                    <div>
-                      <p className="text-xl font-extrabold text-[#172554]">
-                        {formatPrice(favorite.pricePerNight)}
-                      </p>
-
-                      <p className="text-xs text-[#64748B]">
-                        per night
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(
-                          `/user/property/${favorite.propertyId}`
-                        )
-                      }
-                      className="rounded-xl bg-[#172554] px-4 py-2.5 text-xs font-bold text-white transition hover:bg-[#1E3A8A]"
-                    >
-                      View stay
-                    </button>
-                  </div>
-
-                  <button
-                    type="button"
-                    disabled={removingId === favorite.propertyId}
-                    onClick={() =>
-                      removeFavorite(favorite.propertyId)
-                    }
-                    className="mt-4 flex items-center gap-1.5 text-xs font-semibold text-[#64748B] transition hover:text-red-600 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Remove from wishlist
-                  </button>
-                </div>
-              </article>
-            ))}
-          </section>
-        )}
-      </div>
-    </main>
+          </div>
+        </>
+      ) : (
+        <SectionEmptyState {...resolvedEmptyState} />
+      )}
+    </section>
   );
 }

@@ -40,19 +40,6 @@ const AMENITIES = [
   "ELEVATOR",
 ];
 
-const IMAGE_TYPES = [
-  "EXTERIOR",
-  "LIVING_ROOM",
-  "BEDROOM",
-  "KITCHEN",
-  "BATHROOM",
-  "BALCONY",
-  "POOL",
-  "DINING_AREA",
-  "WORKSPACE",
-  "OTHER",
-];
-
 export default function EditListing() {
   const { id } = useParams();
   const navigate = useNavigate();

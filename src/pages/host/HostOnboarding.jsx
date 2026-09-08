@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   ArrowRight,
-  Check,
   Home,
   Loader2,
   LocateFixed,
@@ -27,6 +26,22 @@ const INITIAL_FORM = {
   country: "Nigeria",
 };
 
+/**
+ * Turns backend onboarding failures into the existing host-facing messages
+ * without changing the endpoint or save flow.
+ */
+function getOnboardingError(err) {
+  if (err?.response?.status === 403) {
+    return "This hosting setup is only available to host accounts. Please log in with a host account or create an account as a Host.";
+  }
+
+  return (
+    err?.response?.data?.message ||
+    err?.response?.data ||
+    "We couldn't save your progress."
+  );
+}
+
 export default function HostOnboarding() {
   const navigate = useNavigate();
   const auth = useAuth();
@@ -40,29 +55,13 @@ export default function HostOnboarding() {
   const [detectingLocation, setDetectingLocation] = useState(false);
   const [error, setError] = useState("");
 
-  const getOnboardingError = (err) => {
-    if (err?.response?.status === 403) {
-      return "This hosting setup is only available to host accounts. Please log in with a host account or create an account as a Host.";
-    }
-
-    return (
-      err?.response?.data?.message ||
-      err?.response?.data ||
-      "We couldn't save your progress."
-    );
-  };
-
   const canUseHostOnboarding = () => {
     const role = currentUser?.role?.toUpperCase();
 
     return !role || role === "HOST" || role === "ADMIN";
   };
 
-  useEffect(() => {
-    loadProgress();
-  }, []);
-
-  const loadProgress = async () => {
+  const loadProgress = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -112,7 +111,21 @@ export default function HostOnboarding() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    let isCurrentEffect = true;
+
+    window.queueMicrotask(() => {
+      if (isCurrentEffect) {
+        loadProgress();
+      }
+    });
+
+    return () => {
+      isCurrentEffect = false;
+    };
+  }, [loadProgress]);
 
   const handleChange = (event) => {
     const { name, value } = event.target;

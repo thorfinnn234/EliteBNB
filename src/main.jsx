@@ -1,13 +1,21 @@
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import { AuthProvider } from "./context/AuthContext";
 import "./index.css";
+import App from "./App.jsx";
+import { AuthProvider } from "./context/AuthContext.jsx";
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <AuthProvider>
+/**
+ * Mounts the application providers in the order routing and auth guards expect:
+ * BrowserRouter supplies navigation context, AuthProvider supplies user state,
+ * and App renders the centralized route map.
+ */
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
-  </AuthProvider>
-);
+  </StrictMode>,
+)

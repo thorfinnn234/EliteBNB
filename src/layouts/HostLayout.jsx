@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/layout/Sidebar";
-import Navbar from "../components/layout/Navbar";
+import { LogOut, Settings, UserRound } from "lucide-react";
+import HostMobileNav from "../components/host/HostMobileNav";
+import HostSidebar from "../components/host/HostSidebar";
+import HostTopbar from "../components/host/HostTopbar";
 import { useAuth } from "../hooks/useAuth";
+import { useNotificationUnreadCount } from "../hooks/useNotificationUnreadCount";
 import { hostProfileService } from "../services/hostProfileService";
 
 export default function HostLayout({ children }) {
@@ -14,6 +17,7 @@ export default function HostLayout({ children }) {
   const navigate = useNavigate();
   const auth = useAuth();
   const currentUser = auth?.user;
+  const { unreadCount: notificationUnreadCount } = useNotificationUnreadCount();
   const headerUser = {
     ...currentUser,
     ...hostProfile,
@@ -30,7 +34,7 @@ export default function HostLayout({ children }) {
   const profileImageUrl =
     headerUser?.profileImageUrl || headerUser?.avatar || headerUser?.imageUrl;
 
-  // Close dropdown when clicking outside
+  // Close the profile menu when the user clicks outside the menu or button.
   useEffect(() => {
     function handleClickOutside(event) {
       const clickedMenu = profileMenuRef.current?.contains(event.target);
@@ -46,6 +50,18 @@ export default function HostLayout({ children }) {
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [profileMenuOpen]);
+
+  // Keep the mobile Host navigation from allowing the page behind it to scroll.
+  useEffect(() => {
+    if (!sidebarOpen) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sidebarOpen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -99,46 +115,33 @@ export default function HostLayout({ children }) {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6]">
+    <div className="elite-host-shell">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label="Close host navigation"
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          className="elite-host-shell__scrim lg:hidden"
         />
       )}
 
       {/* Sidebar */}
-      <aside
-        className={`
-          fixed left-0 top-0 z-50 h-screen
-          w-[250px]
-          transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0
-          ${
-            sidebarOpen
-              ? "translate-x-0"
-              : "-translate-x-full"
-          }
-        `}
-      >
-        <Sidebar
-          role="HOST"
-          onSelect={() => setSidebarOpen(false)}
-          onLogout={handleLogout}
-        />
-      </aside>
+      <HostSidebar
+        open={sidebarOpen}
+        notificationUnreadCount={notificationUnreadCount}
+        onClose={() => setSidebarOpen(false)}
+        onLogout={handleLogout}
+      />
 
       {/* Main content */}
-      <div className="min-h-screen lg:ml-[250px]">
+      <div className="elite-host-shell__content">
         {/* Navbar */}
-        <div className="relative">
-          <Navbar
-            role="HOST"
-            userName={displayName}
-            avatar={profileImageUrl}
+        <div className="elite-host-shell__topbar">
+          <HostTopbar
+            displayName={displayName}
+            notificationUnreadCount={notificationUnreadCount}
+            profileImageUrl={profileImageUrl}
             profileButtonRef={profileButtonRef}
             profileMenuOpen={profileMenuOpen}
             onMenuClick={() => setSidebarOpen((prev) => !prev)}
@@ -150,69 +153,66 @@ export default function HostLayout({ children }) {
             <div
               ref={profileMenuRef}
               role="menu"
-              className="absolute right-4 top-[72px] z-40 w-56 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white shadow-lg"
+              className="elite-host-profile-menu"
             >
               {/* User Info Section */}
-              <div className="border-b border-[#E5E7EB] bg-[#FAF9F6] px-4 py-4">
-                <div className="flex items-center gap-3">
-                  {profileImageUrl ? (
-                    <img
-                      src={profileImageUrl}
-                      alt={displayName}
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#172554] text-sm font-semibold text-white">
-                      {displayName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm font-semibold text-[#172554]">
-                      {displayName}
-                    </p>
-                    <p className="text-xs text-[#64748B]">
-                      {headerUser?.email}
-                    </p>
+              <div className="elite-host-profile-menu__summary">
+                {profileImageUrl ? (
+                  <img
+                    src={profileImageUrl}
+                    alt={displayName}
+                    className="elite-host-profile-menu__avatar"
+                  />
+                ) : (
+                  <div className="elite-host-profile-menu__avatar">
+                    {displayName.charAt(0).toUpperCase()}
                   </div>
+                )}
+                <div className="min-w-0">
+                  <span className="elite-host-profile-menu__name">
+                    {displayName}
+                  </span>
+                  <span className="elite-host-profile-menu__email">
+                    {headerUser?.email || "EliteBNB Host"}
+                  </span>
                 </div>
               </div>
 
               {/* Menu Items */}
-              <div className="border-b border-[#E5E7EB] px-4 py-3">
+              <div className="elite-host-profile-menu__items">
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => {
                     navigate("/host/profile");
-                    setProfileMenuOpen(false);
-                  }}
-                  className="block w-full text-left text-sm font-medium text-[#172554] transition hover:text-[#D4A72C]"
+                      setProfileMenuOpen(false);
+                    }}
+                  className="elite-host-profile-menu__item"
                 >
+                  <UserRound size={16} strokeWidth={1.8} />
                   Profile
                 </button>
-              </div>
 
-              <div className="border-b border-[#E5E7EB] px-4 py-3">
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => {
                     navigate("/host/settings");
-                    setProfileMenuOpen(false);
-                  }}
-                  className="block w-full text-left text-sm font-medium text-[#172554] transition hover:text-[#D4A72C]"
+                      setProfileMenuOpen(false);
+                    }}
+                  className="elite-host-profile-menu__item"
                 >
+                  <Settings size={16} strokeWidth={1.8} />
                   Settings
                 </button>
-              </div>
 
-              <div className="px-4 py-3">
                 <button
                   type="button"
                   role="menuitem"
                   onClick={handleLogout}
-                  className="w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 hover:text-red-700"
+                  className="elite-host-profile-menu__item is-danger"
                 >
+                  <LogOut size={16} strokeWidth={1.8} />
                   Logout
                 </button>
               </div>
@@ -221,11 +221,15 @@ export default function HostLayout({ children }) {
         </div>
 
         {/* Page */}
-        <main className="min-w-0">
+        <main className="elite-host-main">
           {children}
         </main>
+
+        <HostMobileNav
+          notificationUnreadCount={notificationUnreadCount}
+          onLogout={handleLogout}
+        />
       </div>
     </div>
   );
 }
-

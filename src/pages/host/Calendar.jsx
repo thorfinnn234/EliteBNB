@@ -69,12 +69,20 @@ export default function Calendar() {
   };
 
   useEffect(() => {
-    loadHostProperties();
+    const loadTimer = window.setTimeout(() => {
+      loadHostProperties();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, []);
 
   useEffect(() => {
     if (selectedPropertyId) {
-      loadAvailability(selectedPropertyId);
+      const loadTimer = window.setTimeout(() => {
+        loadAvailability(selectedPropertyId);
+      }, 0);
+
+      return () => window.clearTimeout(loadTimer);
     }
   }, [selectedPropertyId]);
 

@@ -1,582 +1,760 @@
-import { useEffect, useRef, useState } from "react";
 import {
-  Camera,
-  Check,
-  Loader2,
-  Mail,
+  ArrowRight,
+  Heart,
+  LogOut,
   MapPin,
+  Mail,
+  PenLine,
   Phone,
+  ShieldCheck,
+  Sparkles,
+  Star,
   UserRound,
 } from "lucide-react";
-
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import GuestAvatar from "../../components/user/GuestAvatar";
+import UserPageHeader from "../../components/user/UserPageHeader";
+import { useAuth } from "../../hooks/useAuth";
+import { useGuestAvatar } from "../../hooks/useGuestAvatar";
+import { userProfileData } from "../../data/userHomeData";
 import { userProfileService } from "../../services/userProfileService";
+import { bookingService } from "../../services/bookingService";
+import { favoriteService } from "../../services/favoriteService";
+import { reviewService } from "../../services/reviewService";
+import { mapUserProfile } from "../../utils/userBackendMappers";
+import { normalizeApiList } from "../../utils/userBackendMappers";
+import "./UserHome.css";
+import "./UserPages.css";
 
-const EMPTY_FORM = {
-  firstName: "",
-  lastName: "",
-  phoneNumber: "",
-  location: "",
-  bio: "",
-};
+/**
+ * Creates a safe editable profile snapshot from the available user object.
+ * Missing backend fields use non-sensitive presentation fallbacks.
+ */
+function getInitialProfile(user) {
+  return mapUserProfile(user, {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: user?.role ?? "USER",
+  });
+}
 
-const maskEmail = (email = "") => {
-  const [name, domain] = email.split("@");
+/**
+ * Renders one editable profile field with consistent styling and labels.
+ */
+function ProfileField({ label, name, onChange, type = "text", value }) {
+  return (
+    <label className="elite-profile-field">
+      {label}
+      <input name={name} type={type} value={value} onChange={onChange} />
+    </label>
+  );
+}
 
-  if (!name || !domain) return email;
+/**
+ * Combines local profile fields into the display name used by the identity
+ * panel. The fallback avoids inventing sensitive account information.
+ */
+function getProfileDisplayName(profile) {
+  return (
+    [profile.firstName, profile.lastName].filter(Boolean).join(" ") ||
+    "EliteBNB Guest"
+  );
+}
 
-  const visibleName =
-    name.length <= 2
-      ? `${name.charAt(0)}***`
-      : `${name.slice(0, 2)}***${name.slice(-1)}`;
+/**
+ * Creates initials for the profile identity mark without depending on an
+ * uploaded avatar service that does not exist in the frontend contract yet.
+ */
+function getProfileInitials(displayName) {
+  return displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+}
 
-  return `${visibleName}@${domain}`;
-};
+/**
+ * Shows a local preference toggle for future account personalization.
+ * It updates only component state and does not imply backend persistence.
+ */
+function PreferenceToggle({ description, enabled, label, onToggle }) {
+  return (
+    <button
+      type="button"
+      className={`elite-preference-toggle${enabled ? " is-active" : ""}`}
+      aria-pressed={enabled}
+      onClick={onToggle}
+    >
+      <span>
+        <strong>{label}</strong>
+        <small>{description}</small>
+      </span>
+      <i aria-hidden="true" />
+    </button>
+  );
+}
 
-export default function UserProfile() {
-  const fileInputRef = useRef(null);
+/**
+ * Adds one calm, presentation-only recommendation to the account area.
+ * It uses existing property-route links and mock display data without claiming
+ * a backend recommendation algorithm exists yet.
+ */
+function ProfileRecommendation({ propertyPath = "/user/property", stay }) {
+  return (
+    <section className="elite-profile-recommendation" data-user-page-reveal>
+      <Link
+        to={`${propertyPath}/${stay.id}`}
+        className="elite-profile-recommendation__media"
+      >
+        <img src={stay.image} alt={stay.imageAlt} loading="lazy" />
+        <span aria-hidden="true" />
+      </Link>
 
-  const [profile, setProfile] = useState(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+      <div className="elite-profile-recommendation__content">
+        <p className="elite-user-page-header__eyebrow">
+          A stay that matches your taste
+        </p>
+        <p className="elite-profile-recommendation__location">
+          <MapPin size={15} aria-hidden="true" />
+          {stay.location}
+        </p>
+        <h3>{stay.name}</h3>
+        <p>{stay.descriptor}</p>
+        <div className="elite-profile-recommendation__meta">
+          <span>
+            <Star size={15} fill="currentColor" aria-hidden="true" />
+            {stay.rating}
+          </span>
+          <strong>
+            {stay.price}
+            <small>{stay.qualifier}</small>
+          </strong>
+        </div>
+        <div className="elite-profile-recommendation__actions">
+          <Link to={`${propertyPath}/${stay.id}`}>
+            View stay
+            <ArrowRight size={15} aria-hidden="true" />
+          </Link>
+          <button type="button" aria-label={`Save ${stay.name} to wishlist`}>
+            <Heart size={16} aria-hidden="true" />
+            Save
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
+/**
+ * Replaces the Profile placeholder with a guest account view.
+ * The page keeps preview edits local, while production submits through the
+ * profile service without writing fake identity into AuthContext or storage.
+ */
+export default function UserProfile({ previewMode = false, previewUser }) {
+  const { logout, setUser, user } = useAuth();
+  const {
+    avatarOptions,
+    selectedAvatar,
+    selectedAvatarId,
+    setSelectedAvatarId,
+  } = useGuestAvatar();
+  const navigate = useNavigate();
+  const effectiveUser = previewUser ?? user;
+  const reviewsPath = previewMode ? "/dev/user-preview/reviews" : "/user/reviews";
+  const [profile, setProfile] = useState(() => getInitialProfile(effectiveUser));
+  const [profileStatus, setProfileStatus] = useState({
+    isLoading: !previewMode,
+    isSaving: false,
+    error: "",
+    success: "",
+  });
+  const [imageStatus, setImageStatus] = useState({
+    isUploading: false,
+    error: "",
+    success: "",
+  });
+  const [isAvatarPickerOpen, setIsAvatarPickerOpen] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [preferences, setPreferences] = useState(userProfileData.preferences);
+  const [profileStats, setProfileStats] = useState({
+    savedStays: 0,
+    trips: 0,
+    reviews: 0,
+  });
+  const displayName = getProfileDisplayName(profile);
+  const initials = getProfileInitials(displayName) || "EB";
+  const heroDetails = [
+    { label: "Identity", value: displayName },
+    { label: "Account", value: userProfileData.accountRoleLabel },
+    { label: "Avatar", value: selectedAvatar.label },
+  ];
+  const identityStats = previewMode
+    ? userProfileData.identityStats
+    : [
+        { label: "Saved stays", value: profileStats.savedStays },
+        { label: "Trips", value: profileStats.trips },
+        { label: "Reviews", value: profileStats.reviews },
+      ];
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  /**
+   * Loads the real profile on production routes. Preview mode keeps using the
+   * injected presentation identity and never writes fake auth state.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        setProfileStatus((currentStatus) => ({
+          ...currentStatus,
+          isLoading: true,
+          error: "",
+        }));
+
+        const response = await userProfileService.getProfile();
+        const nextProfile = mapUserProfile(response.data, getInitialProfile(user));
+
+        if (isMounted) {
+          setProfile(nextProfile);
+          setProfileStatus({
+            isLoading: false,
+            isSaving: false,
+            error: "",
+            success: "",
+          });
+        }
+      } catch (error) {
+        console.error("Failed to load user profile:", error);
+
+        if (isMounted) {
+          setProfileStatus({
+            isLoading: false,
+            isSaving: false,
+            error:
+              error?.response?.data?.message ||
+              "We couldn't load your profile details.",
+            success: "",
+          });
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [effectiveUser, previewMode, user]);
 
   useEffect(() => {
-    loadProfile();
-  }, []);
-
-  const loadProfile = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response =
-        await userProfileService.getProfile();
-
-      const data = response.data;
-
-      setProfile(data);
-
-      setForm({
-        firstName: data.firstName || "",
-        lastName: data.lastName || "",
-        phoneNumber: data.phoneNumber || "",
-        location: data.location || "",
-        bio: data.bio || "",
-      });
-    } catch (err) {
-      console.error("Failed to load profile:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't load your profile."
-      );
-    } finally {
-      setLoading(false);
+    if (previewMode) {
+      return undefined;
     }
-  };
 
-  const handleChange = (event) => {
+    let isMounted = true;
+
+    Promise.allSettled([
+      favoriteService.getMine(),
+      bookingService.getMine(),
+      reviewService.getMine(),
+    ]).then(([favoritesResult, bookingsResult, reviewsResult]) => {
+      if (!isMounted) return;
+
+      setProfileStats({
+        savedStays:
+          favoritesResult.status === "fulfilled"
+            ? normalizeApiList(favoritesResult.value.data).length
+            : 0,
+        trips:
+          bookingsResult.status === "fulfilled"
+            ? normalizeApiList(bookingsResult.value.data).length
+            : 0,
+        reviews:
+          reviewsResult.status === "fulfilled"
+            ? normalizeApiList(reviewsResult.value.data).length
+            : 0,
+      });
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  /**
+   * Updates local form state only. A future service call can consume this same
+   * shape once backend profile persistence is available.
+   */
+  const handleProfileChange = (event) => {
     const { name, value } = event.target;
 
-    setForm((current) => ({
-      ...current,
+    setProfile((currentProfile) => ({
+      ...currentProfile,
       [name]: value,
     }));
-
-    setSuccess("");
   };
 
-  const handleSave = async (event) => {
+  /**
+   * Persists editable profile fields through the incoming profile service in
+   * production. Preview mode closes the editor without pretending to save to a
+   * backend.
+   */
+  const handleProfileSubmit = async (event) => {
     event.preventDefault();
 
-    if (!form.firstName.trim()) {
-      setError("First name is required.");
-      return;
-    }
-
-    if (!form.lastName.trim()) {
-      setError("Last name is required.");
+    if (previewMode) {
+      setIsEditingProfile(false);
       return;
     }
 
     try {
-      setSaving(true);
-      setError("");
-      setSuccess("");
+      setProfileStatus({
+        isLoading: false,
+        isSaving: true,
+        error: "",
+        success: "",
+      });
 
-      const response =
-        await userProfileService.updateProfile({
-          firstName: form.firstName.trim(),
-          lastName: form.lastName.trim(),
-          phoneNumber: form.phoneNumber.trim(),
-          location: form.location.trim(),
-          bio: form.bio.trim(),
-        });
+      const response = await userProfileService.updateProfile({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        phoneNumber: profile.phone,
+      });
+      const nextProfile = mapUserProfile(response.data, profile);
 
-      setProfile(response.data);
+      setProfile(nextProfile);
+      setUser?.(response.data);
+      setIsEditingProfile(false);
+      setProfileStatus({
+        isLoading: false,
+        isSaving: false,
+        error: "",
+        success: "Profile updated.",
+      });
+    } catch (error) {
+      console.error("Failed to update user profile:", error);
 
-      setSuccess("Profile updated successfully.");
-    } catch (err) {
-      console.error("Failed to update profile:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't update your profile."
-      );
-    } finally {
-      setSaving(false);
+      setProfileStatus({
+        isLoading: false,
+        isSaving: false,
+        error:
+          error?.response?.data?.message ||
+          error?.response?.data ||
+          "We couldn't update your profile.",
+        success: "",
+      });
     }
   };
 
-  const handleImageChange = async (event) => {
+  const handleProfileImageChange = async (event) => {
     const file = event.target.files?.[0];
+    event.target.value = "";
 
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
-      setError("Please select an image file.");
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Profile image must be smaller than 10MB.");
+      setImageStatus({
+        isUploading: false,
+        error: "Please choose an image file.",
+        success: "",
+      });
       return;
     }
 
     try {
-      setUploading(true);
-      setError("");
-      setSuccess("");
+      setImageStatus({ isUploading: true, error: "", success: "" });
+      const response = await userProfileService.uploadImage(file);
+      const uploadedProfile = response.data?.profile ?? response.data;
+      const nextProfile = mapUserProfile(uploadedProfile, profile);
 
-      const response =
-        await userProfileService.uploadImage(file);
-
-      setProfile(response.data);
-
-      setSuccess("Profile photo updated.");
-    } catch (err) {
-      console.error("Image upload failed:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't upload your profile photo."
-      );
-    } finally {
-      setUploading(false);
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      setProfile(nextProfile);
+      setUser?.({
+        ...user,
+        ...uploadedProfile,
+        profileImageUrl: nextProfile.profileImageUrl,
+      });
+      setImageStatus({
+        isUploading: false,
+        error: "",
+        success: "Profile photo updated.",
+      });
+    } catch (error) {
+      console.error("Failed to upload profile image:", error);
+      setImageStatus({
+        isUploading: false,
+        error:
+          error?.response?.data?.message ||
+          "We couldn't update your profile photo.",
+        success: "",
+      });
     }
   };
 
-  const initials = `${profile?.firstName?.[0] || ""}${
-    profile?.lastName?.[0] || ""
-  }`.toUpperCase();
-  const completionItems = [
-    {
-      label: "Name",
-      complete: Boolean(profile.firstName && profile.lastName),
-    },
-    {
-      label: "Email",
-      complete: Boolean(profile.email),
-    },
-    {
-      label: "Phone",
-      complete: Boolean(profile.phoneNumber),
-    },
-    {
-      label: "Location",
-      complete: Boolean(profile.location),
-    },
-    {
-      label: "Bio",
-      complete: Boolean(profile.bio),
-    },
-    {
-      label: "Photo",
-      complete: Boolean(profile.profileImageUrl),
-    },
-  ];
-  const completedItems = completionItems.filter(
-    (item) => item.complete
-  ).length;
-  const completionPercent = Math.round(
-    (completedItems / completionItems.length) * 100
-  );
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#FAF9F6] px-5 py-10">
-        <div className="mx-auto flex max-w-6xl items-center justify-center py-24">
-          <div className="text-center">
-            <Loader2 className="mx-auto h-7 w-7 animate-spin text-[#D4A72C]" />
-
-            <p className="mt-3 text-sm font-medium text-[#64748B]">
-              Loading your profile...
-            </p>
-          </div>
-        </div>
-      </main>
+  /**
+   * Toggles one local preference without persisting it to a fake endpoint.
+   */
+  const handlePreferenceToggle = (preferenceId) => {
+    setPreferences((currentPreferences) =>
+      currentPreferences.map((preference) =>
+        preference.id === preferenceId
+          ? { ...preference, enabled: !preference.enabled }
+          : preference
+      )
     );
-  }
+  };
 
-  if (!profile) {
-    return (
-      <main className="min-h-screen bg-[#FAF9F6] px-5 py-10">
-        <div className="mx-auto max-w-3xl rounded-3xl border border-red-200 bg-white p-10 text-center">
-          <h2 className="text-xl font-extrabold text-[#172554]">
-            Profile unavailable
-          </h2>
+  /**
+   * Updates the frontend-only illustrated avatar preference.
+   * This intentionally stores no JWT, user record, or server-facing profile
+   * value; backend avatar persistence can be connected in a future profile pass.
+   */
+  const handleAvatarSelect = (avatarId) => {
+    setSelectedAvatarId(avatarId);
+    setIsAvatarPickerOpen(false);
+  };
 
-          <p className="mt-2 text-sm text-red-600">
-            {String(error || "Unable to load your profile.")}
-          </p>
+  /**
+   * Uses the existing auth logout behavior in production.
+   * Preview mode only exits to login so it cannot clear a real token during QA.
+   */
+  const handleLogout = () => {
+    if (!previewMode) {
+      logout();
+    }
 
-          <button
-            type="button"
-            onClick={loadProfile}
-            className="mt-5 rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white"
-          >
-            Try again
-          </button>
-        </div>
-      </main>
-    );
-  }
+    navigate("/login", { replace: true });
+  };
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6]">
-      <div className="mx-auto max-w-6xl px-5 py-8 sm:px-8 lg:px-10">
-        {/* HEADER */}
-        <header>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4A72C]">
-            Your account
-          </p>
+    <section className="elite-user-page elite-user-profile" data-user-page>
+      <UserPageHeader
+        eyebrow="Profile"
+        tone="identity"
+        signature="DOSSIER"
+        detailItems={heroDetails}
+        title="Your EliteBNB travel identity."
+        description="A personal dossier for the details, preferences and account signals that quietly shape better stays."
+        action={
+          <div className="elite-profile-hero-avatar">
+            <GuestAvatar
+              avatarId={selectedAvatarId}
+              imageUrl={previewMode ? "" : profile.profileImageUrl}
+              initials={initials}
+              label={`${displayName} preview avatar`}
+              size="hero"
+            />
+            <span>
+              <strong>{displayName}</strong>
+              <small>EliteBNB Guest</small>
+            </span>
+          </div>
+        }
+      />
 
-          <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#172554] sm:text-4xl">
-            Personal profile
-          </h1>
-
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[#64748B]">
-            Keep your personal information and profile details
-            up to date.
-          </p>
-        </header>
-
-        <div className="mt-8 grid gap-6 lg:grid-cols-[300px_1fr]">
-          {/* PROFILE CARD */}
-          <aside className="h-fit rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="relative">
-                {profile.profileImageUrl ? (
-                  <img
-                    src={profile.profileImageUrl}
-                    alt={`${profile.firstName} ${profile.lastName}`}
-                    className="h-28 w-28 rounded-full object-cover ring-4 ring-[#FAF9F6]"
-                  />
-                ) : (
-                  <div className="flex h-28 w-28 items-center justify-center rounded-full bg-[#172554] text-3xl font-extrabold text-white ring-4 ring-[#FAF9F6]">
-                    {initials || (
-                      <UserRound className="h-10 w-10" />
-                    )}
-                  </div>
-                )}
-
+      <section className="elite-profile-identity" data-user-page-reveal>
+        <div className="elite-profile-identity__avatar-stack">
+          <GuestAvatar
+            avatarId={selectedAvatarId}
+            imageUrl={previewMode ? "" : profile.profileImageUrl}
+            initials={initials}
+            label={`${displayName} profile avatar`}
+            size="hero"
+          />
+          {previewMode ? (
+            <button
+              type="button"
+              className="elite-avatar-picker__trigger"
+              aria-expanded={isAvatarPickerOpen}
+              aria-controls="elite-profile-avatar-options"
+              onClick={() => setIsAvatarPickerOpen((isOpen) => !isOpen)}
+            >
+              Change avatar
+            </button>
+          ) : (
+            <label className="elite-avatar-picker__trigger">
+              {imageStatus.isUploading ? "Uploading..." : "Upload photo"}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleProfileImageChange}
+                disabled={imageStatus.isUploading}
+                hidden
+              />
+            </label>
+          )}
+          {previewMode && isAvatarPickerOpen ? (
+            <div
+              className="elite-avatar-picker__grid"
+              id="elite-profile-avatar-options"
+              aria-label="Choose a preview avatar"
+            >
+              {avatarOptions.map((avatar) => (
                 <button
                   type="button"
-                  disabled={uploading}
-                  onClick={() =>
-                    fileInputRef.current?.click()
-                  }
-                  className="absolute bottom-0 right-0 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white bg-[#D4A72C] text-[#172554] shadow-md transition hover:scale-105 disabled:cursor-wait"
-                  aria-label="Change profile photo"
+                  className={avatar.id === selectedAvatarId ? "is-selected" : ""}
+                  key={avatar.id}
+                  aria-pressed={avatar.id === selectedAvatarId}
+                  onClick={() => handleAvatarSelect(avatar.id)}
                 >
-                  {uploading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Camera className="h-4 w-4" />
-                  )}
+                  <GuestAvatar
+                    avatarId={avatar.id}
+                    initials={initials}
+                    size="option"
+                  />
+                  <span>{avatar.label}</span>
                 </button>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-              </div>
-
-              <h2 className="mt-5 text-xl font-extrabold text-[#172554]">
-                {profile.firstName} {profile.lastName}
-              </h2>
-
-              <p className="mt-1 text-sm text-[#64748B]">
-                EliteBNB guest
-              </p>
+              ))}
             </div>
+          ) : null}
 
-            <div className="mt-7 rounded-2xl bg-[#FAF9F6] p-4 text-left">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-extrabold text-[#172554]">
-                    Complete profile
-                  </h3>
-
-                  <p className="mt-1 text-xs text-[#64748B]">
-                    {completedItems} of {completionItems.length} completed
-                  </p>
-                </div>
-
-                <p className="text-2xl font-extrabold text-[#D4A72C]">
-                  {completionPercent}%
-                </p>
-              </div>
-
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-white">
-                <div
-                  className="h-full rounded-full bg-[#D4A72C] transition-all"
-                  style={{ width: `${completionPercent}%` }}
-                />
-              </div>
-
-              <div className="mt-4 space-y-2">
-                {completionItems.map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex items-center justify-between gap-3 text-xs"
-                  >
-                    <span className="font-semibold text-[#64748B]">
-                      {item.label}
-                    </span>
-
-                    <span
-                      className={
-                        item.complete
-                          ? "font-bold text-green-700"
-                          : "font-bold text-[#94A3B8]"
-                      }
-                    >
-                      {item.complete ? "Done" : "Missing"}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          <p className="elite-avatar-picker__note">
+            {previewMode
+              ? "Frontend preview only."
+              : "Use a clear image for your account profile."}
+          </p>
+          {imageStatus.error ? <p role="alert">{imageStatus.error}</p> : null}
+          {imageStatus.success ? <p role="status">{imageStatus.success}</p> : null}
+        </div>
+        <div className="elite-profile-identity__copy">
+          <p className="elite-user-page-header__eyebrow">Guest profile</p>
+          <h3>{displayName}</h3>
+          <p>
+            {profile.role === "HOST"
+              ? "Host-capable account with guest discovery still available."
+              : "Private guest account prepared for considered stays."}
+          </p>
+        </div>
+        <dl className="elite-profile-identity__details">
+          <div>
+            <dt>
+              <Mail size={14} aria-hidden="true" />
+              Email
+            </dt>
+            <dd>{profile.email || "Not added yet"}</dd>
+          </div>
+          <div>
+            <dt>
+              <Phone size={14} aria-hidden="true" />
+              Phone
+            </dt>
+            <dd>{profile.phone || "Not added yet"}</dd>
+          </div>
+        </dl>
+        <dl
+          className="elite-profile-identity__stats"
+          aria-label="Guest travel identity summary"
+        >
+          {identityStats.map((stat) => (
+            <div key={stat.label}>
+              <dt>{stat.label}</dt>
+              <dd>{stat.value}</dd>
             </div>
+          ))}
+        </dl>
+        <button
+          type="button"
+          className="elite-user-page__primary-button"
+          onClick={() => setIsEditingProfile((isEditing) => !isEditing)}
+        >
+          <PenLine size={15} aria-hidden="true" />
+          {isEditingProfile ? "Close editor" : "Edit profile"}
+        </button>
+      </section>
 
-            <div className="mt-7 border-t border-[#E5E7EB] pt-5">
-              <ProfileInfo
-                icon={Mail}
-                label="Email"
-                value={maskEmail(profile.email)}
-              />
-
-              <ProfileInfo
-                icon={Phone}
-                label="Phone"
-                value={
-                  profile.phoneNumber ||
-                  "Not provided"
-                }
-              />
-
-              <ProfileInfo
-                icon={MapPin}
-                label="Location"
-                value={
-                  profile.location ||
-                  "Not provided"
-                }
-              />
-            </div>
-          </aside>
-
-          {/* FORM */}
-          <section className="rounded-3xl border border-[#E5E7EB] bg-white p-6 shadow-sm sm:p-8">
+      <div className="elite-profile-layout">
+        <section className="elite-user-page__surface" data-user-page-reveal>
+          <div className="elite-profile-card__heading">
+            <span>
+              <UserRound size={18} aria-hidden="true" />
+            </span>
             <div>
-              <h2 className="text-xl font-extrabold text-[#172554]">
-                Profile information
-              </h2>
-
-              <p className="mt-1 text-sm text-[#64748B]">
-                Edit the information associated with your
-                EliteBNB profile.
+              <p className="elite-user-section-heading__eyebrow">
+                Personal profile
               </p>
+              <h3>{isEditingProfile ? "Edit guest details" : "Account snapshot"}</h3>
             </div>
+          </div>
 
-            {success && (
-              <div className="mt-6 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                <Check className="h-4 w-4" />
-                {success}
-              </div>
-            )}
-
-            {error && (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-                {String(error)}
-              </div>
-            )}
-
-            <form
-              onSubmit={handleSave}
-              className="mt-7"
-            >
-              <div className="grid gap-5 sm:grid-cols-2">
-                <FormField
+          {isEditingProfile ? (
+            <form className="elite-profile-form" onSubmit={handleProfileSubmit}>
+              <div className="elite-profile-form__grid">
+                <ProfileField
                   label="First name"
                   name="firstName"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  placeholder="Your first name"
-                  required
+                  value={profile.firstName}
+                  onChange={handleProfileChange}
                 />
-
-                <FormField
+                <ProfileField
                   label="Last name"
                   name="lastName"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  placeholder="Your last name"
-                  required
+                  value={profile.lastName}
+                  onChange={handleProfileChange}
                 />
-
-                <FormField
-                  label="Phone number"
-                  name="phoneNumber"
-                  value={form.phoneNumber}
-                  onChange={handleChange}
-                  placeholder="+234..."
+                <ProfileField
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={profile.email}
+                  onChange={handleProfileChange}
                 />
-
-                <FormField
-                  label="Location"
-                  name="location"
-                  value={form.location}
-                  onChange={handleChange}
-                  placeholder="Lagos, Nigeria"
+                <ProfileField
+                  label="Phone"
+                  name="phone"
+                  type="tel"
+                  value={profile.phone}
+                  onChange={handleProfileChange}
                 />
               </div>
 
-              {/* EMAIL */}
-              <div className="mt-5">
-                <label className="text-sm font-bold text-[#172554]">
-                  Email address
-                </label>
+              <label className="elite-profile-field">
+                Account role
+                <input value={profile.role} readOnly />
+              </label>
 
-                <div className="relative mt-2">
-                  <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
+              {profileStatus.error ? (
+                <p role="alert">{profileStatus.error}</p>
+              ) : null}
 
-                  <input
-                    value={maskEmail(profile.email)}
-                    disabled
-                    className="w-full cursor-not-allowed rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] py-3 pl-11 pr-4 text-sm text-[#64748B]"
-                  />
-                </div>
-
-                <p className="mt-2 text-xs text-[#94A3B8]">
-                  Your login email cannot be changed here.
-                </p>
-              </div>
-
-              {/* BIO */}
-              <div className="mt-5">
-                <div className="flex justify-between gap-3">
-                  <label className="text-sm font-bold text-[#172554]">
-                    About you
-                  </label>
-
-                  <span className="text-xs text-[#94A3B8]">
-                    {form.bio.length}/1000
-                  </span>
-                </div>
-
-                <textarea
-                  name="bio"
-                  value={form.bio}
-                  onChange={handleChange}
-                  maxLength={1000}
-                  rows={5}
-                  placeholder="Tell hosts a little about yourself..."
-                  className="mt-2 w-full resize-none rounded-xl border border-[#E5E7EB] bg-white p-4 text-sm text-[#111827] outline-none transition placeholder:text-[#94A3B8] focus:border-[#D4A72C] focus:ring-2 focus:ring-[#D4A72C]/10"
-                />
-              </div>
-
-              <div className="mt-7 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex min-w-[150px] items-center justify-center gap-2 rounded-xl bg-[#172554] px-6 py-3 text-sm font-bold text-white transition hover:bg-[#1E3A8A] disabled:cursor-wait disabled:opacity-60"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save changes"
-                  )}
-                </button>
-              </div>
+              <button
+                type="submit"
+                className="elite-user-page__primary-button"
+                disabled={profileStatus.isSaving}
+              >
+                {profileStatus.isSaving ? "Saving..." : "Save profile"}
+              </button>
             </form>
+          ) : (
+            <div className="elite-profile-summary">
+              <p>
+                Your account details stay ready for booking flows and profile
+                updates where the backend profile contract is available.
+              </p>
+              {profileStatus.isLoading ? (
+                <p role="status">Loading your latest profile details...</p>
+              ) : null}
+              {profileStatus.error ? (
+                <p role="alert">{profileStatus.error}</p>
+              ) : null}
+              {profileStatus.success ? (
+                <p role="status">{profileStatus.success}</p>
+              ) : null}
+              <dl>
+                <div>
+                  <dt>Account role</dt>
+                  <dd>{userProfileData.accountRoleLabel}</dd>
+                </div>
+                <div>
+                  <dt>{previewMode ? "Preferred tone" : "Preferences"}</dt>
+                  <dd>
+                    {previewMode
+                      ? "Waterfront, quiet arrival, design-led stays"
+                      : "Stored on this device"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>Profile status</dt>
+                  <dd>
+                    {profileStatus.isLoading
+                      ? "Loading"
+                      : profileStatus.error
+                        ? "Unavailable"
+                        : "Connected"}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          )}
+        </section>
+
+        <aside className="elite-profile-side">
+          <section className="elite-user-page__surface" data-user-page-reveal>
+            <div className="elite-profile-card__heading">
+              <span>
+                <Sparkles size={18} aria-hidden="true" />
+              </span>
+              <div>
+                <p className="elite-user-section-heading__eyebrow">
+                  Preferences
+                </p>
+                <h3>How you like to stay</h3>
+              </div>
+            </div>
+
+            {previewMode ? (
+              <div className="elite-profile-preferences">
+                {preferences.map((preference) => (
+                  <PreferenceToggle
+                    key={preference.id}
+                    description={preference.description}
+                    enabled={preference.enabled}
+                    label={preference.label}
+                    onToggle={() => handlePreferenceToggle(preference.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="elite-profile-summary">
+                Preferences are available in preview only and are not saved to
+                your account.
+              </p>
+            )}
           </section>
-        </div>
+
+          <section className="elite-user-page__surface" data-user-page-reveal>
+            <div className="elite-profile-card__heading">
+              <span>
+                <ShieldCheck size={18} aria-hidden="true" />
+              </span>
+              <div>
+                <p className="elite-user-section-heading__eyebrow">
+                  Account access
+                </p>
+                <h3>Security</h3>
+              </div>
+            </div>
+            <ul className="elite-profile-security">
+              {userProfileData.securityItems.map((item) => (
+                <li key={item}>
+                  <ShieldCheck size={16} aria-hidden="true" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="elite-profile-account-actions">
+              <Link to={reviewsPath} className="elite-profile-review-link">
+                <Star size={16} aria-hidden="true" />
+                View your reviews
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <button
+                type="button"
+                className="elite-profile-logout"
+                onClick={handleLogout}
+              >
+                <LogOut size={16} aria-hidden="true" />
+                Logout
+              </button>
+            </div>
+          </section>
+        </aside>
       </div>
-    </main>
-  );
-}
 
-function FormField({
-  label,
-  name,
-  value,
-  onChange,
-  placeholder,
-  required = false,
-}) {
-  return (
-    <div>
-      <label className="text-sm font-bold text-[#172554]">
-        {label}
-      </label>
-
-      <input
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        required={required}
-        className="mt-2 w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#111827] outline-none transition placeholder:text-[#94A3B8] focus:border-[#D4A72C] focus:ring-2 focus:ring-[#D4A72C]/10"
-      />
-    </div>
-  );
-}
-
-function ProfileInfo({ icon: Icon, label, value }) {
-  return (
-    <div className="flex gap-3 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#FAF9F6]">
-        <Icon className="h-4 w-4 text-[#D4A72C]" />
-      </div>
-
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-[#94A3B8]">
-          {label}
-        </p>
-
-        <p className="mt-0.5 break-words text-sm font-semibold text-[#172554]">
-          {value}
-        </p>
-      </div>
-    </div>
+      {previewMode ? (
+        <ProfileRecommendation
+          propertyPath="/property"
+          stay={userProfileData.recommendedStay}
+        />
+      ) : null}
+    </section>
   );
 }

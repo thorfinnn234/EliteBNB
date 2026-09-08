@@ -29,7 +29,11 @@ export default function Reservations() {
   };
 
   useEffect(() => {
-    loadReservations();
+    const loadTimer = window.setTimeout(() => {
+      loadReservations();
+    }, 0);
+
+    return () => window.clearTimeout(loadTimer);
   }, []);
 
   const handleStatusUpdate = async (

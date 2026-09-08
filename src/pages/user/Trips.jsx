@@ -1,551 +1,442 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
+  ArrowRight,
   CalendarDays,
-  ChevronRight,
-  Clock3,
-  MapPin,
-  RefreshCcw,
-  Users,
-  WalletCards,
-  XCircle,
   CheckCircle2,
+  MapPin,
+  ShieldAlert,
+  UsersRound,
+  X,
 } from "lucide-react";
-
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ContentSkeleton,
+  SectionEmptyState,
+  SectionErrorState,
+} from "../../components/user/UserFeedbackStates";
+import UserPageHeader from "../../components/user/UserPageHeader";
+import UserStatusTabs from "../../components/user/UserStatusTabs";
+import { userTripsData } from "../../data/userHomeData";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { bookingService } from "../../services/bookingService";
 import { propertyService } from "../../services/propertyService";
+import { groupTripsByStatus } from "../../utils/userBackendMappers";
+import { normalizeApiList } from "../../utils/userBackendMappers";
+import "./UserHome.css";
+import "./UserPages.css";
 
-const TABS = [
-  { id: "ALL", label: "All trips" },
-  { id: "PENDING", label: "Pending" },
-  { id: "CONFIRMED", label: "Upcoming" },
-  { id: "COMPLETED", label: "Completed" },
-  { id: "CANCELLED", label: "Cancelled" },
-];
+const emptyTripGroups = {
+  upcoming: [],
+  completed: [],
+  cancelled: [],
+};
 
-export default function Trips() {
-  const navigate = useNavigate();
-
-  const [bookings, setBookings] = useState([]);
-  const [propertyDetails, setPropertyDetails] = useState({});
-  const [activeTab, setActiveTab] = useState("ALL");
-
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    loadTrips();
-  }, []);
-
-  const loadTrips = async () => {
-    try {
-      setLoading(true);
-      setError("");
-
-      const response = await bookingService.getMine();
-      const bookingData = response.data || [];
-
-      setBookings(bookingData);
-
-      const uniquePropertyIds = [
-        ...new Set(
-          bookingData
-            .map((booking) => booking.propertyId)
-            .filter(Boolean)
-        ),
-      ];
-
-      const propertyResponses = await Promise.allSettled(
-        uniquePropertyIds.map((propertyId) =>
-          propertyService.getById(propertyId)
-        )
-      );
-
-      const propertyMap = {};
-
-      propertyResponses.forEach((result, index) => {
-        const propertyId = uniquePropertyIds[index];
-
-        if (result.status === "fulfilled") {
-          propertyMap[propertyId] = result.value.data;
-        }
-      });
-
-      setPropertyDetails(propertyMap);
-    } catch (err) {
-      console.error("Failed to load trips:", err);
-
-      setError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't load your trips right now."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredBookings = useMemo(() => {
-    if (activeTab === "ALL") {
-      return bookings;
-    }
-
-    return bookings.filter(
-      (booking) => booking.status === activeTab
-    );
-  }, [bookings, activeTab]);
-
-  const sortedBookings = useMemo(() => {
-    return [...filteredBookings].sort((a, b) => {
-      return new Date(b.createdAt) - new Date(a.createdAt);
-    });
-  }, [filteredBookings]);
-
-  const getCount = (status) => {
-    if (status === "ALL") return bookings.length;
-
-    return bookings.filter(
-      (booking) => booking.status === status
-    ).length;
-  };
-
-  const formatPrice = (price) =>
-    new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(price || 0);
-
-  const formatDate = (date) => {
-    if (!date) return "";
-
-    return new Intl.DateTimeFormat("en-NG", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(`${date}T00:00:00`));
-  };
-
-  const getNumberOfNights = (checkIn, checkOut) => {
-    if (!checkIn || !checkOut) return 0;
-
-    const start = new Date(`${checkIn}T00:00:00`);
-    const end = new Date(`${checkOut}T00:00:00`);
-
-    const difference = end.getTime() - start.getTime();
-
-    if (difference <= 0) return 0;
-
-    return Math.ceil(
-      difference / (1000 * 60 * 60 * 24)
-    );
-  };
+/**
+ * Renders one guest itinerary as a visual travel card.
+ * The card avoids cancellation rules because those must be decided by backend
+ * booking state in a later integration pass.
+ */
+function TripCard({
+  cancelling = false,
+  onCancelTrip,
+  prominent = false,
+  previewMode = false,
+  trip,
+}) {
+  const propertyPath = previewMode ? "/property" : "/user/property";
+  const propertyDetailsPath = `${propertyPath}/${trip.propertyId}`;
+  const reservationDetailsPath =
+    !previewMode && trip.id ? `/user/trips/${trip.id}` : propertyDetailsPath;
+  const canCancelPendingTrip =
+    !previewMode && trip.statusCode === "PENDING" && onCancelTrip;
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6]">
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 lg:px-10">
-        {/* HEADER */}
-        <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
+    <article className={`elite-trip-card${prominent ? " is-prominent" : ""}`}>
+      <Link to={reservationDetailsPath} className="elite-trip-card__media">
+        {trip.image ? (
+          <img src={trip.image} alt={trip.imageAlt} loading="lazy" />
+        ) : (
+          <span className="elite-trip-card__media-empty">No image available</span>
+        )}
+      </Link>
+
+      <div className="elite-trip-card__content">
+        <span className="elite-trip-card__status">
+          <CheckCircle2 size={15} aria-hidden="true" />
+          {trip.status}
+        </span>
+        <div>
+          <p className="elite-trip-card__location">
+            <MapPin size={15} aria-hidden="true" />
+            {trip.location}
+          </p>
+          <h3>{trip.name}</h3>
+          <p>{trip.note}</p>
+        </div>
+
+        <dl className="elite-trip-card__details">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D4A72C]">
-              Your journeys
-            </p>
-
-            <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-[#172554] sm:text-4xl">
-              My Trips
-            </h1>
-
-            <p className="mt-3 max-w-xl text-sm leading-6 text-[#64748B]">
-              Keep track of your upcoming, pending and completed
-              EliteBNB reservations.
-            </p>
+            <dt>
+              <CalendarDays size={15} aria-hidden="true" />
+              Dates
+            </dt>
+            <dd>{trip.dates}</dd>
           </div>
+          <div>
+            <dt>
+              <UsersRound size={15} aria-hidden="true" />
+              Stay
+            </dt>
+            <dd>
+              {trip.guests} · {trip.nights}
+            </dd>
+          </div>
+        </dl>
 
-          {!loading && (
-            <button
-              type="button"
-              onClick={loadTrips}
-              className="flex w-fit items-center gap-2 rounded-xl border border-[#E5E7EB] bg-white px-4 py-2.5 text-sm font-semibold text-[#172554] transition hover:border-[#D4A72C]"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh
-            </button>
-          )}
-        </section>
-
-        {/* SUMMARY */}
-        {!loading && !error && bookings.length > 0 && (
-          <section className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <SummaryCard
-              icon={Clock3}
-              value={getCount("PENDING")}
-              label="Pending"
-            />
-
-            <SummaryCard
-              icon={CalendarDays}
-              value={getCount("CONFIRMED")}
-              label="Upcoming"
-            />
-
-            <SummaryCard
-              icon={CheckCircle2}
-              value={getCount("COMPLETED")}
-              label="Completed"
-            />
-
-            <SummaryCard
-              icon={XCircle}
-              value={getCount("CANCELLED")}
-              label="Cancelled"
-            />
-          </section>
-        )}
-
-        {/* TABS */}
-        <section className="mt-8 flex gap-2 overflow-x-auto pb-2">
-          {TABS.map((tab) => {
-            const active = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap rounded-full border px-5 py-2.5 text-sm font-semibold transition ${
-                  active
-                    ? "border-[#172554] bg-[#172554] text-white"
-                    : "border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#D4A72C] hover:text-[#172554]"
-                }`}
+        <div className="elite-trip-card__footer">
+          <span>Ref {trip.reference}</span>
+          <div className="elite-trip-card__links">
+            {trip.propertyId ? (
+              <Link
+                to={propertyDetailsPath}
+                className="elite-trip-card__property-link"
               >
-                {tab.label}
-
-                <span
-                  className={`ml-2 rounded-full px-2 py-0.5 text-xs ${
-                    active
-                      ? "bg-white/15 text-white"
-                      : "bg-[#F1F5F9] text-[#64748B]"
-                  }`}
-                >
-                  {getCount(tab.id)}
-                </span>
-              </button>
-            );
-          })}
-        </section>
-
-        {/* LOADING */}
-        {loading && (
-          <section className="mt-8 space-y-5">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={index}
-                className="overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white"
-              >
-                <div className="grid md:grid-cols-[260px_1fr]">
-                  <div className="h-56 animate-pulse bg-[#E5E7EB] md:h-full" />
-
-                  <div className="p-6">
-                    <div className="h-5 w-32 animate-pulse rounded bg-[#E5E7EB]" />
-                    <div className="mt-4 h-7 w-2/3 animate-pulse rounded bg-[#E5E7EB]" />
-                    <div className="mt-3 h-4 w-1/3 animate-pulse rounded bg-[#E5E7EB]" />
-                    <div className="mt-8 h-16 animate-pulse rounded-2xl bg-[#F1F5F9]" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </section>
-        )}
-
-        {/* ERROR */}
-        {!loading && error && (
-          <section className="mt-8 rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
-            <h2 className="text-xl font-extrabold text-red-700">
-              Unable to load trips
-            </h2>
-
-            <p className="mt-2 text-sm text-red-600">
-              {error}
-            </p>
-
-            <button
-              type="button"
-              onClick={loadTrips}
-              className="mt-5 rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white"
-            >
-              Try again
-            </button>
-          </section>
-        )}
-
-        {/* NO BOOKINGS AT ALL */}
-        {!loading &&
-          !error &&
-          bookings.length === 0 && (
-            <section className="mt-8 rounded-3xl border border-[#E5E7EB] bg-white px-6 py-16 text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FFF8E1]">
-                <CalendarDays className="h-7 w-7 text-[#D4A72C]" />
-              </div>
-
-              <h2 className="mt-5 text-2xl font-extrabold text-[#172554]">
-                No trips yet
-              </h2>
-
-              <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#64748B]">
-                When you reserve an EliteBNB property,
-                your booking will appear here.
-              </p>
-
+                View property
+              </Link>
+            ) : null}
+            <Link to={reservationDetailsPath}>
+              View trip
+              <ArrowRight size={15} aria-hidden="true" />
+            </Link>
+            {canCancelPendingTrip ? (
               <button
                 type="button"
-                onClick={() => navigate("/user/home")}
-                className="mt-6 rounded-xl bg-[#D4A72C] px-6 py-3 text-sm font-extrabold text-[#172554]"
+                className="elite-trip-card__cancel"
+                disabled={cancelling}
+                onClick={() => onCancelTrip(trip)}
               >
-                Explore stays
+                {cancelling ? "Cancelling..." : "Cancel trip"}
               </button>
-            </section>
-          )}
-
-        {/* EMPTY FILTER */}
-        {!loading &&
-          !error &&
-          bookings.length > 0 &&
-          sortedBookings.length === 0 && (
-            <section className="mt-8 rounded-3xl border border-[#E5E7EB] bg-white px-6 py-14 text-center">
-              <CalendarDays className="mx-auto h-7 w-7 text-[#D4A72C]" />
-
-              <h2 className="mt-4 text-xl font-extrabold text-[#172554]">
-                Nothing here yet
-              </h2>
-
-              <p className="mt-2 text-sm text-[#64748B]">
-                You don't have any {activeTab.toLowerCase()} trips.
-              </p>
-            </section>
-          )}
-
-        {/* BOOKINGS */}
-        {!loading &&
-          !error &&
-          sortedBookings.length > 0 && (
-            <section className="mt-8 space-y-5">
-              {sortedBookings.map((booking) => {
-                const property =
-                  propertyDetails[booking.propertyId];
-
-                const propertyImage =
-                  property?.images?.[0];
-
-                const nights = getNumberOfNights(
-                  booking.checkIn,
-                  booking.checkOut
-                );
-
-                return (
-                  <article
-                    key={booking.id}
-                    className="overflow-hidden rounded-3xl border border-[#E5E7EB] bg-white shadow-sm transition hover:shadow-md"
-                  >
-                    <div className="grid md:grid-cols-[280px_minmax(0,1fr)]">
-                      {/* IMAGE */}
-                      <div
-                        onClick={() =>
-                          navigate(
-                            `/user/property/${booking.propertyId}`
-                          )
-                        }
-                        className="group h-56 cursor-pointer overflow-hidden bg-[#E5E7EB] md:h-full md:min-h-[290px]"
-                      >
-                        {propertyImage ? (
-                          <img
-                            src={propertyImage}
-                            alt={booking.propertyTitle}
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-sm text-[#64748B]">
-                            Property image
-                          </div>
-                        )}
-                      </div>
-
-                      {/* CONTENT */}
-                      <div className="p-5 sm:p-6">
-                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                          <div>
-                            <StatusBadge status={booking.status} />
-
-                            <h2 className="mt-3 text-xl font-extrabold text-[#172554] sm:text-2xl">
-                              {booking.propertyTitle}
-                            </h2>
-
-                            {property?.location && (
-                              <p className="mt-2 flex items-center gap-1.5 text-sm text-[#64748B]">
-                                <MapPin className="h-4 w-4 text-[#D4A72C]" />
-                                {property.location}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="sm:text-right">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">
-                              Total
-                            </p>
-
-                            <p className="mt-1 text-xl font-extrabold text-[#172554]">
-                              {formatPrice(
-                                booking.totalAmount
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* TRIP DETAILS */}
-                        <div className="mt-6 grid gap-3 rounded-2xl bg-[#F8FAFC] p-4 sm:grid-cols-3">
-                          <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#94A3B8]">
-                              Check-in
-                            </p>
-
-                            <p className="mt-1 text-sm font-bold text-[#172554]">
-                              {formatDate(
-                                booking.checkIn
-                              )}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#94A3B8]">
-                              Check-out
-                            </p>
-
-                            <p className="mt-1 text-sm font-bold text-[#172554]">
-                              {formatDate(
-                                booking.checkOut
-                              )}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-[10px] font-bold uppercase tracking-wide text-[#94A3B8]">
-                              Stay
-                            </p>
-
-                            <p className="mt-1 text-sm font-bold text-[#172554]">
-                              {nights}{" "}
-                              {nights === 1
-                                ? "night"
-                                : "nights"}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[#64748B]">
-                          <span className="flex items-center gap-2">
-                            <Users className="h-4 w-4 text-[#D4A72C]" />
-                            {booking.guests}{" "}
-                            {booking.guests === 1
-                              ? "guest"
-                              : "guests"}
-                          </span>
-
-                          <span className="flex items-center gap-2">
-                            <WalletCards className="h-4 w-4 text-[#D4A72C]" />
-                            Booking #{booking.id}
-                          </span>
-                        </div>
-
-                        {/* ACTIONS */}
-                        <div className="mt-6 flex flex-wrap gap-3 border-t border-[#E5E7EB] pt-5">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(
-                                `/user/property/${booking.propertyId}`
-                              )
-                            }
-                            className="flex items-center gap-2 rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#1E3A8A]"
-                          >
-                            View property
-                            <ChevronRight className="h-4 w-4" />
-                          </button>
-
-                          {booking.status ===
-                            "COMPLETED" && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(
-                                  "/user/reviews"
-                                )
-                              }
-                              className="rounded-xl border border-[#E5E7EB] bg-white px-5 py-2.5 text-sm font-bold text-[#172554] transition hover:border-[#D4A72C]"
-                            >
-                              Leave a review
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </section>
-          )}
+            ) : null}
+          </div>
+        </div>
       </div>
-    </main>
+    </article>
   );
 }
 
-function SummaryCard({ icon: Icon, value, label }) {
+/**
+ * Confirms pending cancellation without using `window.confirm`. The copy makes
+ * clear that the backend preserves the booking row as cancelled history.
+ */
+function CancelTripDialog({
+  error,
+  isCancelling,
+  onClose,
+  onConfirm,
+  trip,
+}) {
+  if (!trip) return null;
+
   return (
-    <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-2xl font-extrabold text-[#172554]">
-            {value}
-          </p>
+    <div className="elite-trip-cancel-modal" role="presentation" onMouseDown={onClose}>
+      <section
+        aria-labelledby="trip-cancel-title"
+        aria-modal="true"
+        className="elite-trip-cancel-modal__panel"
+        role="dialog"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          aria-label="Close cancellation dialog"
+          className="elite-trip-cancel-modal__close"
+          disabled={isCancelling}
+          onClick={onClose}
+        >
+          <X size={17} aria-hidden="true" />
+        </button>
 
-          <p className="mt-1 text-sm text-[#64748B]">
-            {label}
-          </p>
-        </div>
+        <span className="elite-trip-cancel-modal__icon">
+          <ShieldAlert size={22} aria-hidden="true" />
+        </span>
+        <p className="elite-user-page-header__eyebrow">Pending reservation</p>
+        <h2 id="trip-cancel-title">Cancel this pending reservation?</h2>
+        <p>
+          This will remove {trip.name} from your active trips. The booking
+          record will remain in your history as cancelled.
+        </p>
 
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#FFF8E1]">
-          <Icon className="h-5 w-5 text-[#D4A72C]" />
+        {error ? (
+          <p className="elite-trip-cancel-modal__error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="elite-trip-cancel-modal__actions">
+          <button type="button" disabled={isCancelling} onClick={onClose}>
+            Keep trip
+          </button>
+          <button type="button" disabled={isCancelling} onClick={onConfirm}>
+            {isCancelling ? "Cancelling..." : "Cancel reservation"}
+          </button>
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-function StatusBadge({ status }) {
-  const styles = {
-    PENDING:
-      "border-amber-200 bg-amber-50 text-amber-700",
-    CONFIRMED:
-      "border-emerald-200 bg-emerald-50 text-emerald-700",
-    COMPLETED:
-      "border-blue-200 bg-blue-50 text-blue-700",
-    CANCELLED:
-      "border-red-200 bg-red-50 text-red-700",
+/**
+ * Adds a compact itinerary-board element to the Trips hero.
+ * It uses existing mock trip presentation fields only, so cancellation rules
+ * and booking authority remain future backend responsibilities.
+ */
+function TripHeroTicket({ trip }) {
+  if (!trip) {
+    return (
+      <div className="elite-trips-hero-ticket">
+        <span>Next journey</span>
+        <strong>Open calendar</strong>
+        <small>Choose an EliteBNB stay to begin.</small>
+      </div>
+    );
+  }
+
+  return (
+    <div className="elite-trips-hero-ticket">
+      <span>Next journey</span>
+      <strong>{trip.name}</strong>
+      <dl>
+        <div>
+          <dt>Destination</dt>
+          <dd>{trip.location}</dd>
+        </div>
+        <div>
+          <dt>Dates</dt>
+          <dd>{trip.dates}</dd>
+        </div>
+        <div>
+          <dt>Status</dt>
+          <dd>{trip.status}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+/**
+ * Replaces the starter Trips placeholder with a guest-focused itinerary view.
+ * Production protection stays in AppRoutes; preview mode only changes empty
+ * state links so visual review remains inside the development route family.
+ */
+export default function Trips({ previewMode = false }) {
+  const [activeTab, setActiveTab] = useState("upcoming");
+  const [productionTrips, setProductionTrips] = useState(emptyTripGroups);
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    error: false,
+  });
+  const [cancelDialogTrip, setCancelDialogTrip] = useState(null);
+  const [cancellingBookingId, setCancellingBookingId] = useState(null);
+  const [cancelError, setCancelError] = useState("");
+  const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
+  const { emptyStates, tabs } = userTripsData;
+
+  useBodyScrollLock(Boolean(cancelDialogTrip));
+
+  /**
+   * Loads authenticated bookings only for production USER routes. Preview
+   * remains isolated to presentation data, while backend failures become the
+   * existing section-level error state.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadTrips() {
+      try {
+        setProductionState({ isLoading: true, error: false });
+
+        const response = await bookingService.getMine();
+        const bookings = normalizeApiList(response.data);
+        const propertyCache = new Map();
+        const enrichedBookings = await Promise.all(
+          bookings.map(async (booking) => {
+            const propertyId = booking?.propertyId;
+
+            if (!propertyId) return booking;
+
+            if (!propertyCache.has(propertyId)) {
+              propertyCache.set(
+                propertyId,
+                propertyService.getById(propertyId).then(
+                  (propertyResponse) => propertyResponse.data,
+                  () => null
+                )
+              );
+            }
+
+            const property = await propertyCache.get(propertyId);
+
+            return property ? { ...booking, property } : booking;
+          })
+        );
+
+        if (!isMounted) return;
+
+        setProductionTrips(groupTripsByStatus(enrichedBookings));
+        setProductionState({ isLoading: false, error: false });
+      } catch (error) {
+        console.error("Failed to load user trips:", error);
+
+        if (isMounted) {
+          setProductionTrips(emptyTripGroups);
+          setProductionState({ isLoading: false, error: true });
+        }
+      }
+    }
+
+    loadTrips();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  /**
+   * Opens the cancellation confirmation only for backend-confirmed PENDING
+   * trips. Backend ownership and status rules remain authoritative.
+   */
+  const openCancelDialog = (trip) => {
+    if (trip.statusCode !== "PENDING") return;
+
+    setCancelDialogTrip(trip);
+    setCancelError("");
   };
 
-  const labels = {
-    PENDING: "Pending",
-    CONFIRMED: "Confirmed",
-    COMPLETED: "Completed",
-    CANCELLED: "Cancelled",
+  /**
+   * Cancels after confirmation and waits for the backend response before
+   * moving the trip out of active itinerary state. This avoids pretending a
+   * cancellation succeeded when the server rejects ownership or status.
+   */
+  const confirmCancelTrip = async () => {
+    if (!cancelDialogTrip?.id) return;
+
+    try {
+      setCancellingBookingId(cancelDialogTrip.id);
+      setCancelError("");
+
+      await bookingService.cancel(cancelDialogTrip.id);
+
+      setProductionTrips((currentGroups) => {
+        const removeBooking = (list) =>
+          list.filter((trip) => String(trip.id) !== String(cancelDialogTrip.id));
+        const cancelledTrip = {
+          ...cancelDialogTrip,
+          status: "Cancelled",
+          statusCode: "CANCELLED",
+          note: "Pending reservation cancelled.",
+        };
+
+        return {
+          upcoming: removeBooking(currentGroups.upcoming),
+          completed: removeBooking(currentGroups.completed),
+          cancelled: [cancelledTrip, ...removeBooking(currentGroups.cancelled)],
+        };
+      });
+
+      setCancelDialogTrip(null);
+    } catch (error) {
+      console.error("Failed to cancel pending trip:", error);
+      setCancelError(
+        error?.response?.data?.message ||
+          "We couldn't cancel this pending reservation."
+      );
+    } finally {
+      setCancellingBookingId(null);
+    }
+  };
+
+  const presentationState = previewMode
+    ? userTripsData.presentationState
+    : productionState;
+  const trips = previewMode ? userTripsData.trips : productionTrips;
+  const currentTrips = trips[activeTab] ?? [];
+  const nextTrip = trips.upcoming[0];
+  const heroDetails = [
+    { label: "Next stay", value: nextTrip?.location ?? "To be chosen" },
+    { label: "Dates", value: nextTrip?.dates ?? "Open calendar" },
+    { label: "Mode", value: "Journey board" },
+  ];
+  const emptyState = {
+    ...emptyStates[activeTab],
+    actionTo: emptyStates[activeTab]?.actionTo ? searchPath : undefined,
   };
 
   return (
-    <span
-      className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${
-        styles[status] ||
-        "border-slate-200 bg-slate-50 text-slate-600"
-      }`}
-    >
-      {labels[status] || status}
-    </span>
+    <section className="elite-user-page elite-user-trips" data-user-page>
+      <UserPageHeader
+        eyebrow="Trips"
+        tone="journey"
+        signature="18 SEP"
+        detailItems={heroDetails}
+        title="Your journey, beautifully arranged."
+        description="Upcoming escapes stay prominent, while completed and cancelled reservations remain close enough to revisit without becoming booking records."
+        media={
+          nextTrip && nextTrip.image ? (
+            <img src={nextTrip.image} alt="" loading="lazy" />
+          ) : null
+        }
+        action={<TripHeroTicket trip={nextTrip} />}
+      />
+
+      <div className="elite-user-page__surface" data-user-page-reveal>
+        <UserStatusTabs
+          activeTab={activeTab}
+          onChange={setActiveTab}
+          tabs={tabs}
+        />
+      </div>
+
+      {presentationState.isLoading ? (
+        <ContentSkeleton count={3} />
+      ) : presentationState.error ? (
+        <SectionErrorState
+          title="We couldn't load your trips."
+          description="Your itinerary can be retried once the bookings service responds."
+        />
+      ) : currentTrips.length ? (
+        <div className="elite-trip-list" data-user-page-reveal>
+          {currentTrips.map((trip, index) => (
+            <TripCard
+              key={trip.id}
+              cancelling={String(cancellingBookingId) === String(trip.id)}
+              onCancelTrip={openCancelDialog}
+              prominent={activeTab === "upcoming" && index === 0}
+              previewMode={previewMode}
+              trip={trip}
+            />
+          ))}
+        </div>
+      ) : (
+        <SectionEmptyState {...emptyState} />
+      )}
+
+      <CancelTripDialog
+        error={cancelError}
+        isCancelling={Boolean(cancellingBookingId)}
+        onClose={() => {
+          if (!cancellingBookingId) {
+            setCancelDialogTrip(null);
+            setCancelError("");
+          }
+        }}
+        onConfirm={confirmCancelTrip}
+        trip={cancelDialogTrip}
+      />
+    </section>
   );
 }

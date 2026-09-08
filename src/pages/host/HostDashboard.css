@@ -1,0 +1,1201 @@
+.elite-host-dashboard {
+  background:
+    radial-gradient(circle at 8% 8%, rgba(212, 167, 44, 0.12), transparent 19rem),
+    linear-gradient(90deg, rgba(23, 37, 84, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(250, 249, 246, 0.7), rgba(244, 239, 228, 0.74)),
+    #faf9f6;
+  background-size:
+    auto,
+    4.5rem 4.5rem,
+    auto,
+    auto;
+  color: #111827;
+  font-family: var(--elite-font-ui);
+  min-block-size: calc(100dvh - 4.45rem);
+  padding: clamp(1rem, 2.8vw, 2.35rem);
+}
+
+.elite-host-dashboard__inner {
+  inline-size: min(100%, 92rem);
+  margin-inline: auto;
+}
+
+.elite-host-dashboard__hero {
+  background:
+    radial-gradient(circle at 62% -12%, rgba(212, 167, 44, 0.2), transparent 18rem),
+    linear-gradient(135deg, rgba(23, 37, 84, 0.98), rgba(31, 57, 118, 0.94)),
+    #172554;
+  border: 1px solid rgba(212, 167, 44, 0.18);
+  border-radius: 2rem;
+  box-shadow: 0 28px 80px rgba(23, 37, 84, 0.18);
+  color: #ffffff;
+  display: grid;
+  gap: clamp(1rem, 2.4vw, 1.55rem);
+  grid-template-columns:
+    minmax(0, 0.95fr)
+    minmax(16rem, 0.58fr)
+    minmax(14rem, 0.36fr);
+  overflow: hidden;
+  padding: clamp(1.05rem, 2.35vw, 1.9rem);
+  position: relative;
+}
+
+.elite-host-dashboard__hero::before {
+  color: rgba(255, 255, 255, 0.045);
+  content: "HOST";
+  font-size: clamp(4rem, 14vw, 11rem);
+  font-weight: 850;
+  inset: auto 1rem -2.2rem auto;
+  line-height: 0.8;
+  pointer-events: none;
+  position: absolute;
+}
+
+.elite-host-dashboard__hero::after {
+  aspect-ratio: 1 / 1.25;
+  border: 1px solid rgba(212, 167, 44, 0.2);
+  border-radius: 999px 999px 0 0;
+  content: "";
+  inline-size: clamp(12rem, 30vw, 28rem);
+  inset: auto -8rem -9rem auto;
+  opacity: 0.5;
+  pointer-events: none;
+  position: absolute;
+}
+
+.elite-host-dashboard__hero-copy,
+.elite-host-dashboard__hero-property,
+.elite-host-dashboard__attention {
+  position: relative;
+  z-index: 1;
+}
+
+.elite-host-dashboard__eyebrow,
+.elite-host-dashboard__panel-header span,
+.elite-host-dashboard__panel-kicker,
+.elite-host-dashboard__attention-label {
+  color: #d4a72c;
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.elite-host-dashboard__hero-property {
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 1.45rem;
+  display: grid;
+  grid-template-rows: minmax(9rem, 1fr) auto;
+  min-block-size: 13.75rem;
+  overflow: hidden;
+}
+
+.elite-host-dashboard__hero-property.is-empty {
+  align-content: center;
+  gap: 0.65rem;
+  grid-template-rows: auto;
+  padding: 1rem;
+}
+
+.elite-host-dashboard__hero-property-media {
+  background: rgba(255, 255, 255, 0.08);
+  min-block-size: 9rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.elite-host-dashboard__hero-property-media img {
+  block-size: 100%;
+  display: block;
+  inline-size: 100%;
+  object-fit: cover;
+  transition: transform 420ms ease;
+}
+
+.elite-host-dashboard__hero-property:hover .elite-host-dashboard__hero-property-media img {
+  transform: scale(1.035);
+}
+
+.elite-host-dashboard__hero-property-media > div {
+  align-items: center;
+  block-size: 100%;
+  color: rgba(255, 255, 255, 0.68);
+  display: flex;
+  flex-direction: column;
+  font-size: 0.82rem;
+  gap: 0.42rem;
+  justify-content: center;
+}
+
+.elite-host-dashboard__hero-property-media .elite-host-dashboard__status {
+  inset: 0.72rem 0.72rem auto auto;
+  position: absolute;
+}
+
+.elite-host-dashboard__hero-property-copy {
+  display: grid;
+  gap: 0.32rem;
+  padding: 0.86rem;
+}
+
+.elite-host-dashboard__hero-property-kicker {
+  color: #d4a72c;
+  display: block;
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.elite-host-dashboard__hero-property strong {
+  color: #ffffff;
+  display: block;
+  font-size: clamp(1rem, 1.6vw, 1.24rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.elite-host-dashboard__hero-property p {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.elite-host-dashboard__hero-property button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #d4a72c;
+  display: inline-flex;
+  font-size: 0.8rem;
+  font-weight: 850;
+  gap: 0.34rem;
+  justify-self: start;
+  margin-block-start: 0.18rem;
+  padding: 0;
+}
+
+.elite-host-dashboard__hero h1 {
+  font-size: clamp(2rem, 4.2vw, 4rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 0.95;
+  margin-block: 0.48rem 0.72rem;
+  max-inline-size: 12ch;
+}
+
+.elite-host-dashboard__hero-copy > p {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(0.95rem, 1.4vw, 1.08rem);
+  line-height: 1.58;
+  max-inline-size: 43rem;
+}
+
+.elite-host-dashboard__hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-block-start: 1.05rem;
+}
+
+.elite-host-dashboard__primary-action,
+.elite-host-dashboard__secondary-action,
+.elite-host-dashboard__attention button,
+.elite-host-dashboard__panel-header button,
+.elite-host-dashboard__panel--revenue button,
+.elite-host-dashboard__listing-footer button {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 0.45rem;
+  justify-content: center;
+  min-block-size: 2.75rem;
+  padding: 0.78rem 1.05rem;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-host-dashboard__primary-action {
+  background: #d4a72c;
+  border: 1px solid #d4a72c;
+  color: #172554;
+}
+
+.elite-host-dashboard__secondary-action {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.elite-host-dashboard__primary-action:hover,
+.elite-host-dashboard__secondary-action:hover,
+.elite-host-dashboard__attention button:hover,
+.elite-host-dashboard__panel--revenue button:hover,
+.elite-host-dashboard__listing-footer button:hover,
+.elite-host-dashboard__panel-header button:hover,
+.elite-host-dashboard__quick-action:hover {
+  transform: translateY(-1px);
+}
+
+.elite-host-dashboard__primary-action:active,
+.elite-host-dashboard__secondary-action:active,
+.elite-host-dashboard__quick-action:active {
+  transform: translateY(0) scale(0.99);
+}
+
+.elite-host-dashboard button:focus-visible {
+  outline: 2px solid rgba(212, 167, 44, 0.75);
+  outline-offset: 3px;
+}
+
+.elite-host-dashboard__attention {
+  align-self: stretch;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1.45rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-block-size: 13.75rem;
+  padding: 1.05rem;
+}
+
+.elite-host-dashboard__attention strong {
+  color: #ffffff;
+  display: block;
+  font-size: clamp(2.45rem, 5vw, 4.25rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 0.9;
+  margin-block: 0.72rem 0.5rem;
+}
+
+.elite-host-dashboard__attention p {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.elite-host-dashboard__attention button,
+.elite-host-dashboard__panel--revenue button {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  color: #172554;
+  margin-block-start: 0.85rem;
+}
+
+.elite-host-dashboard__alert {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 1.1rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-block-start: 1rem;
+  padding: 1rem 1.1rem;
+}
+
+.elite-host-dashboard__metrics {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: minmax(16rem, 1.22fr) repeat(3, minmax(0, 0.78fr));
+  margin-block-start: 1rem;
+}
+
+.elite-host-dashboard__metric {
+  background: rgba(250, 249, 246, 0.62);
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 1.05rem;
+  box-shadow: none;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  min-block-size: 8.3rem;
+  padding: 1rem;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-host-dashboard__metric:hover {
+  border-color: rgba(212, 167, 44, 0.32);
+  transform: translateY(-2px);
+}
+
+.elite-host-dashboard__metric.is-dark {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(212, 167, 44, 0.2), transparent 8rem),
+    linear-gradient(135deg, rgba(23, 37, 84, 0.96), rgba(15, 23, 42, 0.93));
+  border-color: rgba(212, 167, 44, 0.18);
+  color: #ffffff;
+}
+
+.elite-host-dashboard__metric.is-gold {
+  background: #fff8e6;
+  border-color: rgba(212, 167, 44, 0.3);
+}
+
+.elite-host-dashboard__metric > div > span:first-child {
+  color: #64748b;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.elite-host-dashboard__metric.is-dark span:first-child,
+.elite-host-dashboard__metric.is-dark p {
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.elite-host-dashboard__metric strong {
+  color: #172554;
+  display: block;
+  font-size: clamp(1.65rem, 2vw, 2.25rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  margin-block-start: 0.72rem;
+}
+
+.elite-host-dashboard__metric.is-dark strong {
+  color: #ffffff;
+}
+
+.elite-host-dashboard__metric p {
+  color: #64748b;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  margin-block-start: 0.4rem;
+}
+
+.elite-host-dashboard__metric-icon {
+  align-items: center;
+  background: rgba(23, 37, 84, 0.07);
+  border-radius: 1rem;
+  color: #172554;
+  display: inline-flex;
+  flex: 0 0 auto;
+  inline-size: 2.8rem;
+  justify-content: center;
+  min-block-size: 2.8rem;
+}
+
+.elite-host-dashboard__metric.is-dark .elite-host-dashboard__metric-icon {
+  background: rgba(212, 167, 44, 0.16);
+  color: #d4a72c;
+}
+
+.elite-host-dashboard__quick-actions {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-block-start: 1.15rem;
+}
+
+.elite-host-dashboard__quick-action {
+  align-items: center;
+  background: rgba(250, 249, 246, 0.48);
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 1rem;
+  color: #172554;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: auto 1fr auto;
+  min-block-size: 4.8rem;
+  padding: 0.82rem;
+  text-align: left;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-host-dashboard__quick-action:hover {
+  background: rgba(255, 255, 255, 0.78);
+  border-color: rgba(212, 167, 44, 0.34);
+}
+
+.elite-host-dashboard__quick-icon {
+  align-items: center;
+  background: #172554;
+  border-radius: 0.95rem;
+  color: #ffffff;
+  display: inline-flex;
+  inline-size: 2.45rem;
+  justify-content: center;
+  min-block-size: 2.45rem;
+}
+
+.elite-host-dashboard__quick-action strong,
+.elite-host-dashboard__quick-action small {
+  display: block;
+}
+
+.elite-host-dashboard__quick-action strong {
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.elite-host-dashboard__quick-action small {
+  color: #64748b;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin-block-start: 0.22rem;
+}
+
+.elite-host-dashboard__operations-grid {
+  display: grid;
+  gap: 1.15rem;
+  grid-template-columns: minmax(0, 1.45fr) minmax(19rem, 0.72fr);
+  margin-block-start: 1rem;
+}
+
+.elite-host-dashboard__side-stack {
+  display: grid;
+  gap: 1.15rem;
+}
+
+.elite-host-dashboard__panel {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 1.5rem;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.045);
+  padding: clamp(1rem, 2vw, 1.4rem);
+}
+
+.elite-host-dashboard__panel--reservations {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  min-block-size: 100%;
+  padding-inline: 0;
+}
+
+.elite-host-dashboard__panel-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-block-end: 1.15rem;
+}
+
+.elite-host-dashboard__panel-header h2 {
+  color: #172554;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  margin-block-start: 0.2rem;
+}
+
+.elite-host-dashboard__panel-header p {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  margin-block-start: 0.25rem;
+}
+
+.elite-host-dashboard__panel-header button {
+  background: #faf9f6;
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  color: #172554;
+  flex: 0 0 auto;
+  min-block-size: 2.35rem;
+  padding: 0.6rem 0.85rem;
+}
+
+.elite-host-dashboard__panel-header button:hover {
+  background: #172554;
+  border-color: #172554;
+  color: #ffffff;
+}
+
+.elite-host-dashboard__reservation-list {
+  display: grid;
+  gap: 0.82rem;
+}
+
+.elite-host-dashboard__reservation-card {
+  align-items: stretch;
+  background: #faf9f6;
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 1.15rem;
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(8.5rem, 0.34fr) minmax(0, 1fr) auto;
+  padding: 1rem;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-host-dashboard__reservation-card:hover {
+  background: #ffffff;
+  border-color: rgba(212, 167, 44, 0.3);
+  transform: translateY(-1px);
+}
+
+.elite-host-dashboard__reservation-date {
+  align-items: flex-start;
+  color: #172554;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  font-weight: 850;
+  gap: 0.55rem;
+}
+
+.elite-host-dashboard__reservation-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-inline-size: 0;
+}
+
+.elite-host-dashboard__reservation-main h3,
+.elite-host-dashboard__listing-body h3 {
+  color: #172554;
+  font-size: 1.02rem;
+  font-weight: 850;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.elite-host-dashboard__reservation-main p {
+  color: #64748b;
+  font-size: 0.86rem;
+  margin-block-start: 0.24rem;
+}
+
+.elite-host-dashboard__reservation-meta,
+.elite-host-dashboard__listing-facts {
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  gap: 0.55rem 0.85rem;
+  margin-block-start: 0.8rem;
+}
+
+.elite-host-dashboard__reservation-meta span,
+.elite-host-dashboard__listing-facts span,
+.elite-host-dashboard__listing-body p {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.32rem;
+}
+
+.elite-host-dashboard__reservation-side {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  justify-content: space-between;
+  text-align: right;
+}
+
+.elite-host-dashboard__reservation-side strong {
+  color: #111827;
+  font-size: 0.98rem;
+  font-weight: 850;
+}
+
+.elite-host-dashboard__status {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  padding: 0.42rem 0.65rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.elite-host-dashboard__status.is-confirmed,
+.elite-host-dashboard__status-row .is-confirmed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.elite-host-dashboard__status.is-pending,
+.elite-host-dashboard__status-row .is-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.elite-host-dashboard__status.is-completed,
+.elite-host-dashboard__status-row .is-completed {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.elite-host-dashboard__status.is-cancelled,
+.elite-host-dashboard__status-row .is-cancelled {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.elite-host-dashboard__status.is-active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.elite-host-dashboard__status.is-muted {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.elite-host-dashboard__panel--revenue {
+  background:
+    linear-gradient(135deg, rgba(23, 37, 84, 0.08), rgba(212, 167, 44, 0.1)),
+    rgba(250, 249, 246, 0.78);
+  color: #172554;
+}
+
+.elite-host-dashboard__panel--revenue strong {
+  color: #172554;
+  display: block;
+  font-size: clamp(2rem, 4vw, 3.1rem);
+  font-weight: 850;
+  letter-spacing: 0;
+  margin-block-start: 0.72rem;
+}
+
+.elite-host-dashboard__panel--revenue span:not(.elite-host-dashboard__panel-kicker) {
+  color: #64748b;
+  display: block;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  margin-block-start: 0.4rem;
+}
+
+.elite-host-dashboard__panel--revenue button {
+  background: #172554;
+  border-color: #172554;
+  color: #ffffff;
+}
+
+.elite-host-dashboard__panel--revenue button:hover {
+  background: #0f1d43;
+  border-color: #0f1d43;
+  color: #ffffff;
+}
+
+.elite-host-dashboard__status-list {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.elite-host-dashboard__status-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.elite-host-dashboard__status-row > div:first-child {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.elite-host-dashboard__status-row span:first-child {
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 750;
+}
+
+.elite-host-dashboard__status-row strong {
+  color: #172554;
+  font-weight: 850;
+}
+
+.elite-host-dashboard__status-track {
+  background: #e2e8f0;
+  border-radius: 999px;
+  block-size: 0.42rem;
+  overflow: hidden;
+}
+
+.elite-host-dashboard__status-track span {
+  border-radius: inherit;
+  block-size: 100%;
+  display: block;
+  min-inline-size: 0;
+}
+
+.elite-host-dashboard__listing-health .elite-host-dashboard__panel-header {
+  margin-block-end: 0.9rem;
+}
+
+.elite-host-dashboard__health-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.elite-host-dashboard__health-grid div {
+  background: #faf9f6;
+  border-radius: 1rem;
+  padding: 1rem;
+}
+
+.elite-host-dashboard__health-grid strong,
+.elite-host-dashboard__health-grid span {
+  display: block;
+}
+
+.elite-host-dashboard__health-grid strong {
+  color: #172554;
+  font-size: 2rem;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.elite-host-dashboard__health-grid span {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 750;
+  margin-block-start: 0.1rem;
+}
+
+.elite-host-dashboard__portfolio {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(250, 249, 246, 0.52)),
+    rgba(250, 249, 246, 0.72);
+  margin-block-start: 1rem;
+  overflow: hidden;
+  padding: clamp(1.05rem, 2.4vw, 1.7rem);
+  position: relative;
+}
+
+.elite-host-dashboard__portfolio::before {
+  border: 1px solid rgba(212, 167, 44, 0.14);
+  border-radius: 999px 999px 0 0;
+  content: "";
+  inline-size: clamp(8rem, 18vw, 16rem);
+  inset: auto clamp(1rem, 4vw, 3rem) -6rem auto;
+  min-block-size: clamp(10rem, 23vw, 21rem);
+  pointer-events: none;
+  position: absolute;
+}
+
+.elite-host-dashboard__portfolio > * {
+  position: relative;
+  z-index: 1;
+}
+
+.elite-host-dashboard__listing-grid {
+  display: grid;
+  gap: clamp(0.85rem, 2vw, 1.2rem);
+  grid-template-columns: minmax(0, 1.18fr) repeat(2, minmax(0, 0.86fr));
+}
+
+.elite-host-dashboard__listing-card,
+.elite-host-dashboard__listing-add,
+.elite-host-dashboard__empty-listing {
+  background: rgba(250, 249, 246, 0.82);
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  transition:
+    background 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.elite-host-dashboard__listing-card:hover {
+  background: #ffffff;
+  border-color: rgba(212, 167, 44, 0.3);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.1);
+  transform: translateY(-2px);
+}
+
+.elite-host-dashboard__listing-media {
+  background: #dbe3ed;
+  min-block-size: 13rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.elite-host-dashboard__listing-card.is-featured .elite-host-dashboard__listing-media {
+  min-block-size: 18.5rem;
+}
+
+.elite-host-dashboard__listing-media img {
+  block-size: 100%;
+  display: block;
+  inline-size: 100%;
+  object-fit: cover;
+  transition: transform 360ms ease;
+}
+
+.elite-host-dashboard__listing-card:hover .elite-host-dashboard__listing-media img {
+  transform: scale(1.035);
+}
+
+.elite-host-dashboard__listing-media > div {
+  align-items: center;
+  block-size: 100%;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  gap: 0.5rem;
+  justify-content: center;
+  min-block-size: inherit;
+}
+
+.elite-host-dashboard__listing-media .elite-host-dashboard__status {
+  inset: 0.8rem 0.8rem auto auto;
+  position: absolute;
+}
+
+.elite-host-dashboard__listing-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.elite-host-dashboard__listing-body p {
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  margin-block-end: 0.36rem;
+}
+
+.elite-host-dashboard__listing-footer {
+  align-items: center;
+  border-top: 1px solid rgba(23, 37, 84, 0.08);
+  display: flex;
+  gap: 0.8rem;
+  justify-content: space-between;
+  padding-block-start: 0.9rem;
+}
+
+.elite-host-dashboard__listing-footer strong {
+  color: #172554;
+  font-size: 0.98rem;
+  font-weight: 850;
+}
+
+.elite-host-dashboard__listing-footer strong span {
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.elite-host-dashboard__listing-footer button {
+  background: #ffffff;
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  color: #172554;
+  min-block-size: 2.25rem;
+  padding: 0.54rem 0.75rem;
+}
+
+.elite-host-dashboard__listing-add,
+.elite-host-dashboard__empty-listing {
+  align-items: center;
+  border-style: dashed;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  font-weight: 850;
+  gap: 0.55rem;
+  justify-content: center;
+  min-block-size: 18rem;
+  padding: 1.2rem;
+}
+
+.elite-host-dashboard__listing-add:hover,
+.elite-host-dashboard__empty-listing:hover {
+  background: #ffffff;
+  border-color: #d4a72c;
+  color: #172554;
+}
+
+.elite-host-dashboard__empty-state {
+  align-items: center;
+  background: #faf9f6;
+  border: 1px dashed rgba(23, 37, 84, 0.16);
+  border-radius: 1.15rem;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-block-size: 16rem;
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.elite-host-dashboard__empty-state span {
+  align-items: center;
+  background: #ffffff;
+  border-radius: 999px;
+  color: #d4a72c;
+  display: inline-flex;
+  inline-size: 4rem;
+  justify-content: center;
+  min-block-size: 4rem;
+}
+
+.elite-host-dashboard__empty-state strong {
+  color: #172554;
+  display: block;
+  font-size: 1.05rem;
+  margin-block-start: 1rem;
+}
+
+.elite-host-dashboard__empty-state p {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin-block-start: 0.3rem;
+  max-inline-size: 24rem;
+}
+
+.elite-host-dashboard__loading-hero,
+.elite-host-dashboard__loading-grid span,
+.elite-host-dashboard__loading-panel {
+  animation: elite-host-dashboard-pulse 1.1s ease-in-out infinite alternate;
+  background: linear-gradient(90deg, #ffffff, #f4efe4, #ffffff);
+  background-size: 200% 100%;
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 1.5rem;
+}
+
+.elite-host-dashboard__loading-hero {
+  display: grid;
+  gap: 1rem;
+  min-block-size: 15.5rem;
+  padding: 1.45rem;
+}
+
+.elite-host-dashboard__loading-hero span {
+  background: rgba(23, 37, 84, 0.08);
+  border-radius: 999px;
+  display: block;
+}
+
+.elite-host-dashboard__loading-hero span:nth-child(1) {
+  block-size: 0.8rem;
+  inline-size: 12rem;
+}
+
+.elite-host-dashboard__loading-hero span:nth-child(2) {
+  block-size: 4.5rem;
+  inline-size: min(100%, 34rem);
+}
+
+.elite-host-dashboard__loading-hero span:nth-child(3) {
+  block-size: 1rem;
+  inline-size: min(100%, 42rem);
+}
+
+.elite-host-dashboard__loading-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-block-start: 1rem;
+}
+
+.elite-host-dashboard__loading-grid span {
+  min-block-size: 9rem;
+}
+
+.elite-host-dashboard__loading-panel {
+  color: #64748b;
+  margin-block-start: 1rem;
+  padding: 1.5rem;
+}
+
+.elite-host-dashboard__loading-panel p {
+  color: #172554;
+  font-weight: 850;
+}
+
+.elite-host-dashboard__loading-panel small {
+  display: block;
+  margin-block-start: 0.3rem;
+}
+
+@keyframes elite-host-dashboard-pulse {
+  from {
+    background-position: 0% 50%;
+  }
+
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@media (max-width: 1240px) {
+  .elite-host-dashboard__hero {
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 0.72fr);
+  }
+
+  .elite-host-dashboard__attention {
+    min-block-size: auto;
+  }
+
+  .elite-host-dashboard__attention {
+    grid-column: 1 / -1;
+  }
+
+  .elite-host-dashboard__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .elite-host-dashboard__operations-grid,
+  .elite-host-dashboard__listing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-host-dashboard__listing-card.is-featured .elite-host-dashboard__listing-media,
+  .elite-host-dashboard__listing-media {
+    min-block-size: 14rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .elite-host-dashboard {
+    padding-block-end: calc(7.5rem + env(safe-area-inset-bottom));
+  }
+
+  .elite-host-dashboard__hero {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-host-dashboard__hero-copy {
+    order: 1;
+  }
+
+  .elite-host-dashboard__hero h1 {
+    max-inline-size: 16ch;
+  }
+
+  .elite-host-dashboard__hero-property {
+    align-self: start;
+    grid-template-rows: 13rem auto;
+    min-block-size: auto;
+    order: 3;
+  }
+
+  .elite-host-dashboard__attention {
+    min-block-size: auto;
+    order: 2;
+  }
+
+  .elite-host-dashboard__quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-host-dashboard__reservation-card {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-host-dashboard__reservation-side {
+    align-items: flex-start;
+    flex-direction: row;
+    text-align: left;
+  }
+}
+
+@media (max-width: 640px) {
+  .elite-host-dashboard {
+    min-block-size: calc(100dvh - 4.2rem);
+    padding: 0.9rem 0.9rem calc(1.2rem + env(safe-area-inset-bottom));
+  }
+
+  .elite-host-dashboard__hero {
+    border-radius: 1.4rem;
+    padding: 1.05rem;
+  }
+
+  .elite-host-dashboard__hero h1 {
+    font-size: clamp(2rem, 13vw, 3.5rem);
+  }
+
+  .elite-host-dashboard__hero-property {
+    grid-template-rows: 9rem auto;
+  }
+
+  .elite-host-dashboard__hero-property-copy {
+    padding: 0.9rem;
+  }
+
+  .elite-host-dashboard__hero-actions,
+  .elite-host-dashboard__reservation-side,
+  .elite-host-dashboard__listing-footer,
+  .elite-host-dashboard__panel-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .elite-host-dashboard__primary-action,
+  .elite-host-dashboard__secondary-action,
+  .elite-host-dashboard__attention button,
+  .elite-host-dashboard__panel-header button,
+  .elite-host-dashboard__panel--revenue button,
+  .elite-host-dashboard__listing-footer button {
+    inline-size: 100%;
+  }
+
+  .elite-host-dashboard__metrics,
+  .elite-host-dashboard__loading-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-host-dashboard__metric {
+    min-block-size: auto;
+  }
+
+  .elite-host-dashboard__health-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-host-dashboard__panel--reservations {
+    padding-inline: 0;
+  }
+
+  .elite-host-dashboard__listing-card.is-featured .elite-host-dashboard__listing-media,
+  .elite-host-dashboard__listing-media {
+    min-block-size: 12.5rem;
+  }
+}
+
+@media (hover: none) {
+  .elite-host-dashboard__metric:hover,
+  .elite-host-dashboard__quick-action:hover,
+  .elite-host-dashboard__reservation-card:hover,
+  .elite-host-dashboard__listing-card:hover {
+    transform: none;
+  }
+
+  .elite-host-dashboard__listing-card:hover .elite-host-dashboard__listing-media img {
+    transform: none;
+  }
+
+  .elite-host-dashboard__hero-property:hover .elite-host-dashboard__hero-property-media img {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elite-host-dashboard *,
+  .elite-host-dashboard *::before,
+  .elite-host-dashboard *::after {
+    animation-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}

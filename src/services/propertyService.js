@@ -1,8 +1,8 @@
 import api from "./api";
 
 export const propertyService = {
-  getAll: () => {
-    return api.get("/properties");
+  getAll: (params) => {
+    return api.get("/properties", { params });
   },
 
   getById: (id) => {
@@ -25,6 +25,10 @@ export const propertyService = {
 
   update: (id, data) => {
     return api.put(`/properties/${id}`, data);
+  },
+
+  remove: (id) => {
+    return api.delete(`/properties/${id}`);
   },
 
   delete: (id) => {
@@ -52,14 +56,14 @@ export const propertyService = {
   },
 
   deleteImage: (propertyId, imageId) => {
-  return api.delete(
-    `/properties/${propertyId}/images/${imageId}`
-  );
-},
+    return api.delete(
+      `/properties/${propertyId}/images/${imageId}`
+    );
+  },
 
-setCoverImage: (propertyId, imageId) => {
-  return api.patch(
-    `/properties/${propertyId}/images/${imageId}/cover`
-  );
-},
+  setCoverImage: (propertyId, imageId) => {
+    return api.patch(
+      `/properties/${propertyId}/images/${imageId}/cover`
+    );
+  },
 };

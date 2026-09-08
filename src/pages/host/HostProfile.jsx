@@ -110,7 +110,7 @@ export default function HostProfile() {
     } finally {
       setLoading(false);
     }
-  }, [syncProfileState]);
+  }, []);
 
   useEffect(() => {
     const timerId = window.setTimeout(loadProfile, 0);

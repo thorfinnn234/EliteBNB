@@ -21,8 +21,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 const routesByRole = {
   USER: {
-    home: "/user/home",
-    explore: "/explore",
+    home: "/user/dashboard",
+    explore: "/search",
     trips: "/user/trips",
     wishlist: "/user/wishlist",
     messages: "/user/messages",

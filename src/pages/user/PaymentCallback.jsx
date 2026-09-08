@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import {
-  CheckCircle2,
-  Loader2,
-  XCircle,
-} from "lucide-react";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 
 import { paymentService } from "../../services/paymentService";
 
@@ -13,44 +9,41 @@ export default function PaymentCallback() {
   const [searchParams] = useSearchParams();
 
   const [status, setStatus] = useState("verifying");
-  const [message, setMessage] = useState(
-    "We're confirming your payment..."
-  );
+  const [message, setMessage] = useState("We're confirming your payment...");
 
   useEffect(() => {
-    verifyPayment();
-  }, []);
-
-  const verifyPayment = async () => {
     const reference =
-      searchParams.get("reference") ||
-      searchParams.get("trxref");
+      searchParams.get("reference") || searchParams.get("trxref");
 
     if (!reference) {
-      setStatus("failed");
-      setMessage("Payment reference was not found.");
+      window.queueMicrotask(() => {
+        setStatus("failed");
+        setMessage("Payment reference was not found.");
+      });
       return;
     }
 
-    try {
-      await paymentService.verify(reference);
+    const verifyPayment = async () => {
+      try {
+        await paymentService.verify(reference);
 
-      setStatus("success");
-      setMessage(
-        "Payment confirmed. Your reservation is now booked!"
-      );
-    } catch (error) {
-      console.error("Payment verification failed:", error);
+        setStatus("success");
+        setMessage("Payment confirmed. Your reservation is now booked!");
+      } catch (error) {
+        console.error("Payment verification failed:", error);
 
-      setStatus("failed");
+        setStatus("failed");
 
-      setMessage(
-        error?.response?.data?.message ||
-          error?.response?.data ||
-          "We couldn't verify your payment."
-      );
-    }
-  };
+        setMessage(
+          error?.response?.data?.message ||
+            error?.response?.data ||
+            "We couldn't verify your payment.",
+        );
+      }
+    };
+
+    void verifyPayment();
+  }, [searchParams]);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#FAF9F6] px-5">
@@ -58,9 +51,7 @@ export default function PaymentCallback() {
         <div className="mb-7">
           <span className="text-2xl font-black text-[#172554]">
             Elite
-            <span className="text-[#D4A72C]">
-              BNB
-            </span>
+            <span className="text-[#D4A72C]">BNB</span>
           </span>
         </div>
 
@@ -74,9 +65,7 @@ export default function PaymentCallback() {
               Confirming payment
             </h1>
 
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {message}
-            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-500">{message}</p>
 
             <p className="mt-5 text-xs text-slate-400">
               Please don't close this page.
@@ -94,9 +83,7 @@ export default function PaymentCallback() {
               You're booked!
             </h1>
 
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {message}
-            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-500">{message}</p>
 
             <button
               type="button"
@@ -118,9 +105,7 @@ export default function PaymentCallback() {
               Payment not confirmed
             </h1>
 
-            <p className="mt-3 text-sm leading-6 text-slate-500">
-              {message}
-            </p>
+            <p className="mt-3 text-sm leading-6 text-slate-500">{message}</p>
 
             <button
               type="button"

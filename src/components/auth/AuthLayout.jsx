@@ -1,31 +1,45 @@
-import authImage from "../../assets/images/auth-property.jpg";
+import { Link } from "react-router-dom";
+import authImage from "../../assets/images/auth-property-editorial.jpg";
+import EliteLogo from "../public/EliteLogo";
+import "./AuthLayout.css";
 
-export default function AuthLayout({ children }) {
+const defaultVisualDetails = ["Verified homes", "Private arrivals", "Thoughtful hosts"];
+
+/**
+ * Provides the shared editorial authentication shell used by auth pages.
+ * Login and Register pass page-specific copy while existing recovery/verify
+ * screens can continue rendering through the default visual treatment.
+ */
+export default function AuthLayout({
+  children,
+  eyebrow = "PRIVATE RESIDENCES",
+  visualTitle = "Discover exceptional stays selected for design, place and experience.",
+  visualCopy = "EliteBNB keeps authentication calm and focused while the visual side carries the same hospitality language as the public homepage.",
+  visualDetails = defaultVisualDetails,
+  visualImage = authImage,
+  visualAlt = "EliteBNB architectural residence",
+  variant = "default",
+  showBrand = false,
+}) {
   return (
-    <main className="min-h-screen bg-white">
-      <div className="mx-auto grid min-h-screen w-full max-w-[1280px] grid-cols-1 bg-white lg:grid-cols-[0.82fr_1.18fr]">
-
-        {/* LEFT */}
-        <section className="flex items-center justify-center px-8 py-12 sm:px-12 lg:px-16">
-          <div className="w-full max-w-[390px]">
+    <main className={`elite-auth elite-auth--${variant}`}>
+      <div className="elite-auth__shell">
+        <section className="elite-auth__form-panel" aria-label="Authentication form">
+          <div className="elite-auth__form-shell">
+            {showBrand ? (
+              <Link to="/" className="elite-auth__brand-link">
+                <EliteLogo variant="primary" />
+                <span>Back to EliteBNB</span>
+              </Link>
+            ) : null}
             {children}
           </div>
         </section>
 
-        {/* RIGHT */}
-        <section className="relative hidden items-center justify-center px-8 py-10 lg:flex">
-
-          <svg
-            width="0"
-            height="0"
-            className="absolute"
-            aria-hidden="true"
-          >
+        <section className="elite-auth__visual-panel" aria-label="EliteBNB residence preview">
+          <svg width="0" height="0" className="elite-auth__clip" aria-hidden="true">
             <defs>
-              <clipPath
-                id="authImageClip"
-                clipPathUnits="objectBoundingBox"
-              >
+              <clipPath id="authImageClip" clipPathUnits="objectBoundingBox">
                 <path
                   d="
                     M 0.18 0
@@ -63,26 +77,18 @@ export default function AuthLayout({ children }) {
             </defs>
           </svg>
 
-          <div
-            className="relative h-[82vh] max-h-[760px] min-h-[620px] w-full overflow-hidden"
-            style={{
-              clipPath: "url(#authImageClip)",
-            }}
-          >
-            <img
-              src={authImage}
-              alt="EliteBNB property"
-              className="h-full w-full object-cover"
-            />
-
-            <div className="absolute inset-0 bg-gradient-to-t from-[#172554]/25 via-transparent to-black/10" />
-
-            <div className="absolute right-8 top-8 max-w-[300px] text-right">
-              <p className="font-[Manrope] text-lg font-semibold leading-snug text-white">
-                Discover exceptional stays
-                <br />
-                with trusted hosts.
-              </p>
+          <div className="elite-auth__visual-frame">
+            <img src={visualImage} alt={visualAlt} />
+            <span className="elite-auth__visual-shade" aria-hidden="true" />
+            <div className="elite-auth__visual-copy">
+              <p>{eyebrow}</p>
+              <h2>{visualTitle}</h2>
+              <span>{visualCopy}</span>
+            </div>
+            <div className="elite-auth__visual-details" aria-label="EliteBNB trust highlights">
+              {visualDetails.map((detail) => (
+                <span key={detail}>{detail}</span>
+              ))}
             </div>
           </div>
         </section>

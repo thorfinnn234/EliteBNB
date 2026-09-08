@@ -1,474 +1,413 @@
-import { useEffect, useMemo, useState } from "react";
+import DiscoveryChips from "../../components/user/DiscoveryChips";
+import FeaturedStay from "../../components/user/FeaturedStay";
+import GuestSearch from "../../components/user/GuestSearch";
+import SavedPreview from "../../components/user/SavedPreview";
+import UpcomingTrip from "../../components/user/UpcomingTrip";
 import {
-  Search,
-  MapPin,
-  Users,
-  BedDouble,
-  Bath,
-  Heart,
-  CalendarDays,
-} from "lucide-react";
-
-import { propertyService } from "../../services/propertyService";
+  ContentSkeleton,
+  SectionEmptyState,
+  SectionErrorState,
+} from "../../components/user/UserFeedbackStates";
+import UserSectionHeading from "../../components/user/UserSectionHeading";
+import UserStayCard from "../../components/user/UserStayCard";
+import { useAuth } from "../../hooks/useAuth";
+import { userHomeData } from "../../data/userHomeData";
+import { useEffect, useState } from "react";
+import { bookingService } from "../../services/bookingService";
 import { favoriteService } from "../../services/favoriteService";
-import { useNavigate } from "react-router-dom";
-const PROPERTY_TYPES = [
-  "ALL",
-  "APARTMENT",
-  "HOUSE",
-  "VILLA",
-  "HOTEL",
-  "CABIN",
-  "STUDIO",
-  "GUEST_HOUSE",
-];
+import { propertyService } from "../../services/propertyService";
+import {
+  mapBookingToTrip,
+  mapFavoriteToStay,
+  mapPropertyToStay,
+  normalizeApiList,
+} from "../../utils/userBackendMappers";
+import "./UserHome.css";
 
-export default function UserHome() {
-  const [properties, setProperties] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+/**
+ * Extracts a friendly first name from the authenticated user shape.
+ * The auth integration may receive different backend field names, so this
+ * helper gracefully falls back without hardcoding a sample user.
+ */
+function getFirstName(user) {
+  if (user?.firstName) return user.firstName;
+  if (user?.name) return user.name.split(" ")[0];
+  if (user?.email) return user.email.split("@")[0];
 
-  const [selectedType, setSelectedType] = useState("ALL");
-  const [location, setLocation] = useState("");
-  const [guests, setGuests] = useState("");
-  const [checkIn, setCheckIn] = useState("");
-  const [checkOut, setCheckOut] = useState("");
-  const [savedPropertyIds, setSavedPropertyIds] = useState(new Set());
-  const [savingFavoriteId, setSavingFavoriteId] = useState(null);
-  const [favoriteError, setFavoriteError] = useState("");
-  const [favoriteSuccess, setFavoriteSuccess] = useState("");
-  const navigate = useNavigate();
+  return "";
+}
 
-  useEffect(() => {
-    loadProperties();
-  }, []);
+/**
+ * Finds the first booking that still belongs in the guest's upcoming journey
+ * space. Backend status rules stay authoritative; this only groups returned
+ * data for the existing home preview card.
+ */
+function getFirstUpcomingBooking(bookings) {
+  return normalizeApiList(bookings).find((booking) => {
+    const status = String(booking?.status || "").toUpperCase();
 
-  const loadProperties = async () => {
-    try {
-      setLoading(true);
-      setError("");
+    return status !== "COMPLETED" && status !== "CANCELLED";
+  });
+}
 
-      const response = await propertyService.getAll();
+/**
+ * Builds the accepted User Home presentation shape from backend service
+ * responses. Missing endpoints become section-level errors rather than
+ * replacing the full page with fallback mock data.
+ */
+function buildProductionHome({
+  bookingsResult,
+  favoritesResult,
+  propertiesResult,
+}) {
+  const properties =
+    propertiesResult.status === "fulfilled"
+      ? normalizeApiList(propertiesResult.value.data)
+      : [];
+  const favorites =
+    favoritesResult.status === "fulfilled"
+      ? normalizeApiList(favoritesResult.value.data)
+      : [];
+  const bookings =
+    bookingsResult.status === "fulfilled"
+      ? normalizeApiList(bookingsResult.value.data)
+      : [];
+  const [leadProperty, ...supportingProperties] = properties;
+  const firstUpcomingBooking = getFirstUpcomingBooking(bookings);
 
-      setProperties(response.data || []);
-
-      try {
-        const favoritesResponse = await favoriteService.getMine();
-        const favoriteIds = (favoritesResponse.data || []).map(
-          (favorite) => favorite.propertyId
-        );
-
-        setSavedPropertyIds(new Set(favoriteIds));
-      } catch (favoriteErr) {
-        console.error("Failed to load favorites:", favoriteErr);
-      }
-    } catch (err) {
-      console.error("Failed to load properties:", err);
-      setError("We could not load available stays right now.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredProperties = useMemo(() => {
-    return properties.filter((property) => {
-      const matchesType =
-        selectedType === "ALL" ||
-        property.propertyType === selectedType;
-
-      const matchesLocation =
-        !location.trim() ||
-        property.location
-          ?.toLowerCase()
-          .includes(location.trim().toLowerCase());
-
-      const matchesGuests =
-        !guests ||
-        Number(property.maxGuests) >= Number(guests);
-
-      return matchesType && matchesLocation && matchesGuests;
-    });
-  }, [properties, selectedType, location, guests]);
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("en-NG", {
-      style: "currency",
-      currency: "NGN",
-      maximumFractionDigits: 0,
-    }).format(price || 0);
-  };
-
-  const formatPropertyType = (type) => {
-    if (!type) return "";
-
-    return type
-      .replaceAll("_", " ")
-      .toLowerCase()
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-  };
-
-  const toggleFavorite = async (propertyId) => {
-    if (!propertyId) return;
-
-    const isSaved = savedPropertyIds.has(propertyId);
-    const property = properties.find((item) => item.id === propertyId);
-
-    try {
-      setSavingFavoriteId(propertyId);
-      setFavoriteError("");
-      setFavoriteSuccess("");
-
-      if (isSaved) {
-        await favoriteService.remove(propertyId);
-      } else {
-        await favoriteService.add(propertyId);
-      }
-
-      setSavedPropertyIds((current) => {
-        const next = new Set(current);
-
-        if (isSaved) {
-          next.delete(propertyId);
-        } else {
-          next.add(propertyId);
+  return {
+    favoriteIds: favorites.map(
+      (favorite) => favorite?.property?.id ?? favorite?.propertyId ?? favorite?.id
+    ),
+    featuredStay: leadProperty
+      ? {
+          ...mapPropertyToStay(
+            leadProperty,
+            userHomeData.featuredStay,
+            userHomeData.featuredStay.variant
+          ),
+          eyebrow: userHomeData.featuredStay.eyebrow,
+          reason: userHomeData.featuredStay.reason,
         }
+      : null,
+    recommendations: supportingProperties
+      .slice(0, userHomeData.recommendations.length)
+      .map((property, index) =>
+        mapPropertyToStay(
+          property,
+          userHomeData.recommendations[index],
+          userHomeData.recommendations[index]?.variant
+        )
+      ),
+    savedStays: favorites
+      .slice(0, userHomeData.savedStays.length)
+      .map((favorite, index) =>
+        mapFavoriteToStay(
+          favorite,
+          userHomeData.savedStays[index],
+          userHomeData.savedStays[index]?.variant
+        )
+      ),
+    upcomingTrip: firstUpcomingBooking
+      ? mapBookingToTrip(firstUpcomingBooking, userHomeData.upcomingTrip)
+      : null,
+    presentationState: {
+      isLoading: false,
+      errors: {
+        featuredStay: propertiesResult.status === "rejected",
+        recommendations: propertiesResult.status === "rejected",
+        upcomingTrip: bookingsResult.status === "rejected",
+        savedStays: favoritesResult.status === "rejected",
+      },
+    },
+  };
+}
 
-        return next;
+/**
+ * Renders the first authenticated guest dashboard experience.
+ * It combines discovery, recommendation, trip, and saved-stay modules while
+ * keeping mock presentation data isolated for later API replacement.
+ */
+export default function UserHome({ previewMode = false, previewUser }) {
+  const { user } = useAuth();
+  const [productionHome, setProductionHome] = useState(null);
+  const [favoriteLoadingId, setFavoriteLoadingId] = useState(null);
+  const [productionState, setProductionState] = useState({
+    isLoading: !previewMode,
+    errors: {
+      featuredStay: false,
+      recommendations: false,
+      upcomingTrip: false,
+      savedStays: false,
+    },
+  });
+  const firstName = getFirstName(previewUser ?? user);
+  const greeting = firstName ? `Welcome back, ${firstName}.` : "Welcome back.";
+  const searchPath = previewMode ? "/dev/user-preview/explore" : "/user/explore";
+  const savedPath = previewMode ? "/dev/user-preview/saved" : "/user/wishlist";
+  const tripsPath = previewMode ? "/dev/user-preview/trips" : "/user/trips";
+  /**
+   * Production pages use the backend services that arrived from `origin/main`.
+   * Development preview mode deliberately skips those calls so visual QA stays
+   * independent of AuthContext, tokens, and a running backend.
+   */
+  useEffect(() => {
+    if (previewMode) {
+      return undefined;
+    }
+
+    let isMounted = true;
+
+    async function loadUserHome() {
+      setProductionState((currentState) => ({
+        ...currentState,
+        isLoading: true,
+      }));
+
+      const [propertiesResult, favoritesResult, bookingsResult] =
+        await Promise.allSettled([
+          propertyService.getAll(),
+          favoriteService.getMine(),
+          bookingService.getMine(),
+        ]);
+
+      if (!isMounted) return;
+
+      const nextHome = buildProductionHome({
+        bookingsResult,
+        favoritesResult,
+        propertiesResult,
       });
 
-      if (!isSaved) {
-        setFavoriteSuccess(
-          `${property?.title || "Property"} added to favorites.`
-        );
-      }
-    } catch (err) {
-      console.error("Failed to update favorite:", err);
+      setProductionHome(nextHome);
+      setProductionState(nextHome.presentationState);
+    }
 
-      setFavoriteError(
-        err?.response?.data?.message ||
-          err?.response?.data ||
-          "We couldn't update your wishlist."
-      );
+    loadUserHome();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [previewMode]);
+
+  const homeSource =
+    previewMode || !productionHome
+      ? userHomeData
+      : {
+          ...userHomeData,
+          ...productionHome,
+          presentationState: productionState,
+        };
+
+  const {
+    briefing,
+    discoveryShortcuts,
+    emptyStates,
+    featuredStay,
+    presentationState,
+    recommendations,
+    savedStays,
+    upcomingTrip,
+  } = homeSource;
+  const favoriteIds = homeSource.favoriteIds ?? [];
+
+  const { errors, isLoading } = presentationState;
+
+  const handleFavoriteToggle = async (stay) => {
+    if (favoriteLoadingId === stay.id) return;
+
+    const isSaved = favoriteIds.includes(stay.id);
+
+    try {
+      setFavoriteLoadingId(stay.id);
+
+      if (isSaved) {
+        await favoriteService.remove(stay.id);
+      } else {
+        await favoriteService.add(stay.id);
+      }
+
+      setProductionHome((currentHome) => ({
+        ...currentHome,
+        favoriteIds: isSaved
+          ? currentHome.favoriteIds.filter((id) => id !== stay.id)
+          : [...currentHome.favoriteIds, stay.id],
+      }));
+    } catch (error) {
+      console.error("Failed to update favorite:", error);
     } finally {
-      setSavingFavoriteId(null);
+      setFavoriteLoadingId(null);
     }
   };
 
-  useEffect(() => {
-    if (!favoriteSuccess) return undefined;
-
-    const timeoutId = window.setTimeout(() => {
-      setFavoriteSuccess("");
-    }, 5000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [favoriteSuccess]);
+  /**
+   * Keeps empty-state recovery links inside the preview route family when the
+   * backend-free development preview is active.
+   */
+  const getPreviewAwareEmptyState = (emptyState) => ({
+    ...emptyState,
+    actionTo: emptyState.actionTo === "/search" ? searchPath : emptyState.actionTo,
+  });
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6]">
-      {/* HERO */}
-      <section className="border-b border-[#E5E7EB] bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D4A72C]">
-              EliteBNB
-            </p>
-
-            <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-[#172554] sm:text-5xl">
-              Find a stay worth remembering.
-            </h1>
-
-            <p className="mt-4 max-w-2xl text-base leading-7 text-[#64748B]">
-              Discover beautiful homes, apartments and unique stays for your
-              next trip.
-            </p>
-          </div>
-
-          {/* SEARCH BAR */}
-          <div className="mt-8 grid gap-3 rounded-3xl border border-[#E5E7EB] bg-white p-3 shadow-sm lg:grid-cols-[1.4fr_1fr_1fr_0.7fr_auto]">
-            <div className="flex items-center gap-3 rounded-2xl px-4 py-3">
-              <MapPin className="h-5 w-5 text-[#D4A72C]" />
-
-              <div className="w-full">
-                <label className="block text-xs font-bold text-[#172554]">
-                  Where
-                </label>
-
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Search destination"
-                  className="mt-1 w-full bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#94A3B8]"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border-t border-[#E5E7EB] px-4 py-3 lg:border-l lg:border-t-0">
-              <CalendarDays className="h-5 w-5 text-[#D4A72C]" />
-
-              <div className="w-full">
-                <label className="block text-xs font-bold text-[#172554]">
-                  Check in
-                </label>
-
-                <input
-                  type="date"
-                  value={checkIn}
-                  onChange={(e) => setCheckIn(e.target.value)}
-                  className="mt-1 w-full bg-transparent text-sm text-[#64748B] outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border-t border-[#E5E7EB] px-4 py-3 lg:border-l lg:border-t-0">
-              <CalendarDays className="h-5 w-5 text-[#D4A72C]" />
-
-              <div className="w-full">
-                <label className="block text-xs font-bold text-[#172554]">
-                  Check out
-                </label>
-
-                <input
-                  type="date"
-                  value={checkOut}
-                  onChange={(e) => setCheckOut(e.target.value)}
-                  className="mt-1 w-full bg-transparent text-sm text-[#64748B] outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 rounded-2xl border-t border-[#E5E7EB] px-4 py-3 lg:border-l lg:border-t-0">
-              <Users className="h-5 w-5 text-[#D4A72C]" />
-
-              <div className="w-full">
-                <label className="block text-xs font-bold text-[#172554]">
-                  Guests
-                </label>
-
-                <input
-                  type="number"
-                  min="1"
-                  value={guests}
-                  onChange={(e) => setGuests(e.target.value)}
-                  placeholder="Add guests"
-                  className="mt-1 w-full bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#94A3B8]"
-                />
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-[#172554] px-6 py-4 text-sm font-bold text-white transition hover:bg-[#1E3A8A]"
-            >
-              <Search className="h-4 w-4" />
-              Search
-            </button>
-          </div>
+    <div className="elite-user-home">
+      <section
+        className="elite-user-home__intro"
+        aria-labelledby="elite-user-home-title"
+        data-user-home-reveal
+      >
+        <div className="elite-user-home__intro-copy">
+          <p className="elite-user-home__eyebrow">Private guest workspace</p>
+          <h2 id="elite-user-home-title">{greeting}</h2>
+          <p>
+            Where should we take you next? Your current briefing is shaped
+            around restful coastlines, precise hospitality and stays worth
+            returning to.
+          </p>
         </div>
-      </section>
-
-      {/* CONTENT */}
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* PROPERTY TYPES */}
-        <div className="flex gap-3 overflow-x-auto pb-3">
-          {PROPERTY_TYPES.map((type) => {
-            const active = selectedType === type;
-
-            return (
-              <button
-                key={type}
-                type="button"
-                onClick={() => setSelectedType(type)}
-                className={`whitespace-nowrap rounded-full border px-5 py-2.5 text-sm font-semibold transition ${
-                  active
-                    ? "border-[#172554] bg-[#172554] text-white"
-                    : "border-[#E5E7EB] bg-white text-[#64748B] hover:border-[#D4A72C] hover:text-[#172554]"
-                }`}
-              >
-                {type === "ALL" ? "All stays" : formatPropertyType(type)}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="mt-8 flex items-end justify-between gap-4">
+        <div className="elite-user-home__intro-note" aria-label="Guest briefing">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#D4A72C]">
-              Discover
-            </p>
-
-            <h2 className="mt-1 text-2xl font-extrabold text-[#172554]">
-              Stays you may love
-            </h2>
+            <span>{briefing.label}</span>
+            <strong>{briefing.title}</strong>
           </div>
-
-          {!loading && !error && (
-            <p className="text-sm text-[#64748B]">
-              {filteredProperties.length}{" "}
-              {filteredProperties.length === 1 ? "property" : "properties"}
-            </p>
-          )}
+          <p>{briefing.detail}</p>
         </div>
-
-        {favoriteError && (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {String(favoriteError)}
+        <div
+          className="elite-user-home__intro-search"
+          aria-label="Search for a stay"
+        >
+          <GuestSearch searchPath={searchPath} />
+        </div>
+        {featuredStay ? (
+          <div className="elite-user-home__intro-window" aria-hidden="true">
+            <img src={featuredStay.image} alt="" loading="lazy" />
           </div>
-        )}
+        ) : null}
+      </section>
 
-        {favoriteSuccess && (
-          <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-            {favoriteSuccess}
-          </div>
-        )}
+      <div className="elite-user-home__primary-grid">
+        <section className="elite-user-home__featured" data-user-home-reveal>
+          {isLoading ? (
+            <ContentSkeleton variant="featured" />
+          ) : errors.featuredStay ? (
+            <SectionErrorState
+              title="We couldn't load your selected stay."
+              description="Your recommendations will be available again shortly."
+            />
+          ) : featuredStay ? (
+            <FeaturedStay
+              favoriteLoading={favoriteLoadingId === featuredStay.id}
+              isSaved={favoriteIds.includes(featuredStay.id)}
+              onToggleFavorite={previewMode ? undefined : handleFavoriteToggle}
+              propertyPath={previewMode ? "/property" : "/user/property"}
+              stay={featuredStay}
+            />
+          ) : (
+            <SectionEmptyState
+              {...getPreviewAwareEmptyState(emptyStates.recommendations)}
+            />
+          )}
+        </section>
 
-        {/* LOADING */}
-        {loading && (
-          <div className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div key={index}>
-                <div className="aspect-[4/3] animate-pulse rounded-3xl bg-[#E5E7EB]" />
-                <div className="mt-4 h-4 w-3/4 animate-pulse rounded bg-[#E5E7EB]" />
-                <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-[#E5E7EB]" />
-              </div>
+        <aside className="elite-user-home__side-stack" data-user-home-reveal>
+          <section className="elite-user-home__panel">
+            {isLoading ? (
+              <ContentSkeleton variant="trip" />
+            ) : errors.upcomingTrip ? (
+              <SectionErrorState
+                title="We couldn't load your trip."
+                description="Your booking preview can be retried from Trips."
+              />
+            ) : upcomingTrip ? (
+              <UpcomingTrip actionTo={tripsPath} trip={upcomingTrip} />
+            ) : (
+              <SectionEmptyState
+                {...getPreviewAwareEmptyState(emptyStates.upcomingTrip)}
+              />
+            )}
+          </section>
+
+          <section className="elite-user-home__panel">
+            <UserSectionHeading
+              eyebrow="Saved"
+              title="Return to what caught your eye"
+              actionLabel="View all"
+              actionTo={savedPath}
+            />
+
+            {isLoading ? (
+              <ContentSkeleton count={2} />
+            ) : errors.savedStays ? (
+              <SectionErrorState
+                title="We couldn't load saved stays."
+                description="Saved stays will be available again shortly."
+              />
+            ) : savedStays.length ? (
+              <SavedPreview
+                actionTo={savedPath}
+                propertyPath={previewMode ? "/property" : "/user/property"}
+                stays={savedStays}
+              />
+            ) : (
+              <SectionEmptyState
+                {...getPreviewAwareEmptyState(emptyStates.savedStays)}
+              />
+            )}
+          </section>
+        </aside>
+      </div>
+
+      <section
+        className="elite-user-home__section elite-user-home__section--recommendations"
+        data-user-home-reveal
+      >
+        <UserSectionHeading
+          eyebrow="Recommended"
+          title="Stays to consider next"
+          description="A small edit of residences with the design, location and calm that define EliteBNB."
+          actionLabel="View all"
+          actionTo={searchPath}
+        />
+
+        {isLoading ? (
+          <ContentSkeleton count={4} />
+        ) : errors.recommendations ? (
+          <SectionErrorState
+            title="We couldn't load these stays."
+            description="Try again soon or continue exploring all stays."
+          />
+        ) : recommendations.length ? (
+          <div className="elite-user-home__card-grid">
+            {recommendations.map((stay) => (
+              <UserStayCard
+                favoriteLoading={favoriteLoadingId === stay.id}
+                isSaved={favoriteIds.includes(stay.id)}
+                onToggleFavorite={previewMode ? undefined : handleFavoriteToggle}
+                propertyPath={previewMode ? "/property" : "/user/property"}
+                key={stay.id}
+                stay={stay}
+                variant={stay.variant}
+              />
             ))}
           </div>
-        )}
-
-        {/* ERROR */}
-        {!loading && error && (
-          <div className="mt-8 rounded-3xl border border-red-200 bg-red-50 px-6 py-10 text-center">
-            <h3 className="font-bold text-red-700">
-              Unable to load properties
-            </h3>
-
-            <p className="mt-2 text-sm text-red-600">{error}</p>
-
-            <button
-              type="button"
-              onClick={loadProperties}
-              className="mt-5 rounded-xl bg-[#172554] px-5 py-2.5 text-sm font-bold text-white"
-            >
-              Try again
-            </button>
-          </div>
-        )}
-
-        {/* EMPTY */}
-        {!loading && !error && filteredProperties.length === 0 && (
-          <div className="mt-8 rounded-3xl border border-[#E5E7EB] bg-white px-6 py-16 text-center">
-            <Search className="mx-auto h-8 w-8 text-[#D4A72C]" />
-
-            <h3 className="mt-4 text-xl font-extrabold text-[#172554]">
-              No stays found
-            </h3>
-
-            <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#64748B]">
-              Try another destination, property type or guest count.
-            </p>
-          </div>
-        )}
-
-        {/* PROPERTY GRID */}
-        {!loading && !error && filteredProperties.length > 0 && (
-          <div className="mt-7 grid gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filteredProperties.map((property) => (
-              <article
-                key={property.id}
-                onClick={() => navigate(`/user/property/${property.id}`)}
-                className="group cursor-pointer"
-              >
-                <div className="relative overflow-hidden rounded-3xl bg-[#E5E7EB]">
-                  {property.images?.[0] ? (
-                    <img
-                      src={property.images[0]}
-                      alt={property.title}
-                      className="aspect-[4/3] w-full object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex aspect-[4/3] items-center justify-center text-sm text-[#64748B]">
-                      No image available
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    disabled={savingFavoriteId === property.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleFavorite(property.id);
-                    }}
-                    className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur transition hover:scale-105"
-                    aria-label={
-                      savedPropertyIds.has(property.id)
-                        ? "Remove from wishlist"
-                        : "Save to wishlist"
-                    }
-                  >
-                    {savingFavoriteId === property.id ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[#172554] border-t-transparent" />
-                    ) : (
-                      <Heart
-                        className={`h-5 w-5 ${
-                          savedPropertyIds.has(property.id)
-                            ? "fill-[#D4A72C] text-[#D4A72C]"
-                            : "text-[#172554]"
-                        }`}
-                      />
-                    )}
-                  </button>
-
-                  <div className="absolute bottom-4 left-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-bold text-[#172554] shadow-sm backdrop-blur">
-                    {formatPropertyType(property.propertyType)}
-                  </div>
-                </div>
-
-                <div className="pt-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate text-base font-extrabold text-[#172554]">
-                        {property.title}
-                      </h3>
-
-                      <div className="mt-1 flex items-center gap-1.5 text-sm text-[#64748B]">
-                        <MapPin className="h-4 w-4 shrink-0" />
-                        <span className="truncate">
-                          {property.location}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-[#64748B]">
-                    <span className="flex items-center gap-1">
-                      <BedDouble className="h-4 w-4" />
-                      {property.bedrooms} beds
-                    </span>
-
-                    <span className="flex items-center gap-1">
-                      <Bath className="h-4 w-4" />
-                      {property.bathrooms} baths
-                    </span>
-
-                    <span className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      {property.maxGuests} guests
-                    </span>
-                  </div>
-
-                  <p className="mt-4 text-sm text-[#64748B]">
-                    <span className="text-lg font-extrabold text-[#172554]">
-                      {formatPrice(property.pricePerNight)}
-                    </span>{" "}
-                    / night
-                  </p>
-                </div>
-              </article>
-            ))}
-          </div>
+        ) : (
+          <SectionEmptyState
+            {...getPreviewAwareEmptyState(emptyStates.recommendations)}
+          />
         )}
       </section>
-    </main>
+
+      <section
+        className="elite-user-home__section elite-user-home__section--discovery"
+        data-user-home-reveal
+      >
+        <UserSectionHeading
+          eyebrow="Explore by mood"
+          title="Choose the shape of the stay"
+          description="Move by mood first, then narrow the details when a place begins to feel right."
+        />
+        <DiscoveryChips searchPath={searchPath} shortcuts={discoveryShortcuts} />
+      </section>
+    </div>
   );
 }
