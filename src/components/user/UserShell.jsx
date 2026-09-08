@@ -5,6 +5,7 @@ import {
   Heart,
   Home,
   LogOut,
+  MessageSquare,
   Search,
   Star,
   UserRound,
@@ -33,6 +34,14 @@ const primaryNavItems = [
     productionTo: "/user/explore",
     previewTo: "/dev/user-preview/explore",
     icon: Search,
+  },
+  {
+    key: "messages",
+    label: "Messages",
+    routePath: "/user/messages",
+    productionTo: "/user/messages",
+    previewTo: "/user/messages",
+    icon: MessageSquare,
   },
   {
     key: "trips",
@@ -69,7 +78,7 @@ const primaryNavItems = [
 ];
 
 const mobileNavItems = primaryNavItems.filter((item) =>
-  ["home", "explore", "trips", "saved", "profile"].includes(item.key)
+  ["home", "explore", "messages", "trips", "saved", "profile"].includes(item.key)
 );
 
 const routeLabels = {
@@ -81,6 +90,7 @@ const routeLabels = {
   "/dev/user-preview": "Guest home",
   "/search": "Explore",
   "/user/explore": "Explore",
+  "/user/messages": "Messages",
   "/user/dashboard": "Guest home",
   "/user/trips": "Trips",
   "/user/wishlist": "Saved stays",

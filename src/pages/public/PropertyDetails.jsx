@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { bookingService } from "../../services/bookingService";
+import { conversationService } from "../../services/conversationService";
 import { favoriteService } from "../../services/favoriteService";
 import { paymentService } from "../../services/paymentService";
 import { propertyService } from "../../services/propertyService";
@@ -331,7 +332,8 @@ export default function PropertyDetails() {
   const [reviewsError, setReviewsError] = useState("");
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
-  const [messagePanelOpen, setMessagePanelOpen] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [messageError, setMessageError] = useState("");
   const [authPrompt, setAuthPrompt] = useState(null);
   const [shareStatus, setShareStatus] = useState("");
   const [reviewDialog, setReviewDialog] = useState({
@@ -635,19 +637,43 @@ export default function PropertyDetails() {
   };
 
   /**
-   * Opens the future messaging surface only after authentication. The current
-   * backend has no conversations API, so the panel is intentionally read-only.
+   * Creates or reuses the backend conversation for this property. The backend
+   * derives host and guest ownership, so the frontend sends only propertyId.
    */
-  const handleMessageHost = () => {
+  const handleMessageHost = async () => {
     if (!isAuthenticated) {
       requestLoginForAction(
         "message this host",
-        "Sign in to continue once EliteBNB host conversations are enabled."
+        "Sign in to continue your private conversation with this host."
       );
       return;
     }
 
-    setMessagePanelOpen(true);
+    if (!isUser) {
+      setMessageError("Please use a guest account to message this host.");
+      return;
+    }
+
+    try {
+      setMessageLoading(true);
+      setMessageError("");
+      const response = await conversationService.create({
+        propertyId: Number(property.id),
+      });
+      const conversation = response.data?.conversation ?? response.data;
+
+      if (!conversation?.id) throw new Error("Conversation ID was not returned.");
+
+      navigate(`/user/messages?conversation=${conversation.id}`);
+    } catch (error) {
+      console.error("Failed to open host conversation:", error);
+      setMessageError(
+        error?.response?.data?.message ||
+          "We couldn't open a conversation with this host."
+      );
+    } finally {
+      setMessageLoading(false);
+    }
   };
 
   /**
@@ -1022,7 +1048,11 @@ export default function PropertyDetails() {
             not currently provide host contact, rating, biography, or response
             metadata for this PropertyResponse.
             ========================================================= */}
-            <HostSummary property={property} onMessageHost={handleMessageHost} />
+            <HostSummary
+              isMessageLoading={messageLoading}
+              property={property}
+              onMessageHost={handleMessageHost}
+            />
 
             <ReviewsSection
               averageRating={averageRating}
@@ -1068,11 +1098,10 @@ export default function PropertyDetails() {
         </section>
       </div>
 
-      {messagePanelOpen ? (
-        <MessageHostDialog
-          hostName={property.hostName}
-          onClose={() => setMessagePanelOpen(false)}
-        />
+      {messageError ? (
+        <p className="elite-property-detail__alert elite-property-detail__alert--error" role="alert">
+          {messageError}
+        </p>
       ) : null}
 
       {authPrompt ? (
@@ -1499,7 +1528,7 @@ function BookingPanel({
  * message action is prepared for future conversations without inventing contact
  * details or fake host activity.
  */
-function HostSummary({ property, onMessageHost }) {
+function HostSummary({ isMessageLoading, property, onMessageHost }) {
   const hostName = property.hostName || "Host unavailable";
 
   return (
@@ -1522,11 +1551,12 @@ function HostSummary({ property, onMessageHost }) {
 
       <button
         type="button"
+        disabled={isMessageLoading}
         onClick={onMessageHost}
         className="elite-property-host__message"
       >
         <MessageCircle size={17} aria-hidden="true" />
-        Message host
+        {isMessageLoading ? "Opening..." : "Message host"}
       </button>
     </section>
   );
@@ -1628,48 +1658,6 @@ function ReviewsSection({
         <ArrowRight size={15} aria-hidden="true" />
       </button>
     </section>
-  );
-}
-
-/**
- * Explains the current messaging limitation honestly. The panel is structured
- * as a future integration point, but it never pretends to send or store chat.
- */
-function MessageHostDialog({ hostName, onClose }) {
-  return (
-    <div className="elite-property-modal" role="presentation" onMouseDown={onClose}>
-      <section
-        className="elite-property-modal__panel"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="message-host-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          className="elite-property-modal__close"
-          onClick={onClose}
-          aria-label="Close messaging notice"
-        >
-          <X size={18} aria-hidden="true" />
-        </button>
-
-        <div className="elite-property-modal__icon">
-          <MessageCircle size={24} aria-hidden="true" />
-        </div>
-
-        <p className="elite-property-section__label">Message host</p>
-        <h2 id="message-host-title">Host conversations are being prepared.</h2>
-        <p>
-          Messaging with {hostName || "this host"} will be available here once
-          EliteBNB conversations are enabled on the backend.
-        </p>
-
-        <button type="button" onClick={onClose}>
-          Continue reviewing the stay
-        </button>
-      </section>
-    </div>
   );
 }
 

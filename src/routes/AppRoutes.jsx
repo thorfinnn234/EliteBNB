@@ -36,6 +36,7 @@ import PropertyDetails from "../pages/public/PropertyDetails";
 import Search from "../pages/public/Search";
 import BookingCheckout from "../pages/user/BookingCheckout";
 import UserNotifications from "../pages/user/Notification";
+import UserMessages from "../pages/user/Messages";
 import PaymentCallback from "../pages/user/PaymentCallback";
 import ReservationDetails from "../pages/user/ReservationDetails";
 import UserReviews from "../pages/user/Reviews";
@@ -219,6 +220,7 @@ export default function AppRoutes() {
       <Route path="/user/home" element={<Navigate to="/user/dashboard" replace />} />
       <Route path="/user/dashboard" element={<UserPage><UserHome /></UserPage>} />
       <Route path="/user/explore" element={<UserPage><Search /></UserPage>} />
+      <Route path="/user/messages" element={<UserPage><UserMessages /></UserPage>} />
       <Route path="/user/property/:id" element={<UserPage><PropertyDetails /></UserPage>} />
       <Route path="/user/trips" element={<UserPage><Trips /></UserPage>} />
       <Route path="/user/trips/:bookingId" element={<UserPage><ReservationDetails /></UserPage>} />

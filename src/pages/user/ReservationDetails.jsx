@@ -20,6 +20,7 @@ import {
   SectionErrorState,
 } from "../../components/user/UserFeedbackStates";
 import { bookingService } from "../../services/bookingService";
+import { conversationService } from "../../services/conversationService";
 import { propertyService } from "../../services/propertyService";
 import {
   formatEnumLabel,
@@ -185,45 +186,6 @@ function ReservationFact({ icon: Icon, label, value }) {
 }
 
 /**
- * Truthful placeholder for future host conversations. It prepares the UI slot
- * without saving local messages, creating fake threads, or calling endpoints
- * that do not exist yet.
- */
-function MessageHostDialog({ hostName, onClose }) {
-  return (
-    <div className="elite-reservation-modal" role="presentation" onMouseDown={onClose}>
-      <section
-        aria-labelledby="reservation-message-title"
-        aria-modal="true"
-        className="elite-reservation-modal__panel"
-        role="dialog"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <button
-          type="button"
-          aria-label="Close message host panel"
-          className="elite-reservation-modal__close"
-          onClick={onClose}
-        >
-          <X size={17} aria-hidden="true" />
-        </button>
-
-        <span className="elite-reservation-modal__icon">
-          <MessageCircle size={22} aria-hidden="true" />
-        </span>
-        <p className="elite-reservation-kicker">Message host</p>
-        <h2 id="reservation-message-title">
-          Host conversations are coming to this space.
-        </h2>
-        <p>
-          Messaging with {hostName || "your host"} will be available here once
-          EliteBNB enables guest-host conversations. No message has been sent.
-        </p>
-      </section>
-    </div>
-  );
-}
-
 /**
  * Confirms pending cancellation on the details page. This mirrors the Trips
  * list behavior: cancellation is a status transition, never a local deletion.
@@ -300,7 +262,8 @@ export default function ReservationDetails() {
   const [error, setError] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [propertyError, setPropertyError] = useState(false);
-  const [messagePanelOpen, setMessagePanelOpen] = useState(false);
+  const [messageLoading, setMessageLoading] = useState(false);
+  const [messageError, setMessageError] = useState("");
   const [cancelPanelOpen, setCancelPanelOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState("");
@@ -392,6 +355,36 @@ export default function ReservationDetails() {
     ? property.amenities.map((amenity) => formatEnumLabel(amenity, amenity))
     : [];
   const canCancelReservation = status.code === "PENDING";
+
+  /**
+   * Opens the real reservation conversation. The backend validates booking
+   * ownership and derives participants from authentication.
+   */
+  const handleMessageHost = async () => {
+    if (!propertyId || !booking?.id || messageLoading) return;
+
+    try {
+      setMessageLoading(true);
+      setMessageError("");
+      const response = await conversationService.create({
+        propertyId: Number(propertyId),
+        bookingId: Number(booking.id),
+      });
+      const conversation = response.data?.conversation ?? response.data;
+
+      if (!conversation?.id) throw new Error("Conversation ID was not returned.");
+
+      navigate(`/user/messages?conversation=${conversation.id}`);
+    } catch (error) {
+      console.error("Failed to open reservation conversation:", error);
+      setMessageError(
+        error?.response?.data?.message ||
+          "We couldn't open a conversation with this host."
+      );
+    } finally {
+      setMessageLoading(false);
+    }
+  };
 
   /**
    * Calls the new USER-only cancellation endpoint. The backend validates both
@@ -646,19 +639,13 @@ export default function ReservationDetails() {
             </Link>
           ) : null}
 
-          <button type="button" onClick={() => setMessagePanelOpen(true)}>
+          <button type="button" disabled={messageLoading} onClick={handleMessageHost}>
             <MessageCircle size={16} aria-hidden="true" />
-            Message host
+            {messageLoading ? "Opening..." : "Message host"}
           </button>
         </div>
+        {messageError ? <p role="alert">{messageError}</p> : null}
       </section>
-
-      {messagePanelOpen ? (
-        <MessageHostDialog
-          hostName={property?.hostName}
-          onClose={() => setMessagePanelOpen(false)}
-        />
-      ) : null}
 
       {cancelPanelOpen ? (
         <CancelReservationDialog
