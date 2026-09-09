@@ -15,6 +15,9 @@ import {
   Users,
   CreditCard,
   Flag,
+  RotateCcw,
+  ScrollText,
+  ShieldCheck,
 } from "lucide-react";
 
 import { useLocation, useNavigate } from "react-router-dom";
@@ -48,11 +51,13 @@ const routesByRole = {
     dashboard: "/admin/dashboard",
     users: "/admin/users",
     hosts: "/admin/hosts",
-    listings: "/admin/listings",
+    properties: "/admin/properties",
     bookings: "/admin/bookings",
     payments: "/admin/payments",
-    reviews: "/admin/reviews",
+    refunds: "/admin/refunds",
     reports: "/admin/reports",
+    auditLogs: "/admin/audit-logs",
+    notifications: "/admin/notifications",
     settings: "/admin/settings",
   },
 };
@@ -85,12 +90,14 @@ const menuByRole = {
   ADMIN: [
     { label: "Dashboard", icon: LayoutDashboard, key: "dashboard" },
     { label: "Users", icon: Users, key: "users" },
-    { label: "Hosts", icon: User, key: "hosts" },
-    { label: "Listings", icon: Building2, key: "listings" },
+    { label: "Host Verification", icon: ShieldCheck, key: "hosts" },
+    { label: "Properties", icon: Building2, key: "properties" },
     { label: "Bookings", icon: CalendarDays, key: "bookings" },
     { label: "Payments", icon: CreditCard, key: "payments" },
-    { label: "Reviews", icon: Star, key: "reviews" },
+    { label: "Refunds", icon: RotateCcw, key: "refunds" },
     { label: "Reports", icon: Flag, key: "reports" },
+    { label: "Audit Logs", icon: ScrollText, key: "auditLogs" },
+    { label: "Notifications", icon: Bell, key: "notifications" },
     { label: "Settings", icon: Settings, key: "settings" },
   ],
 };

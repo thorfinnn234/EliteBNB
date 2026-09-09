@@ -1,15 +1,28 @@
+import AdminPlaceholderPage from "../../components/admin/AdminPlaceholderPage";
+
+/**
+ * Host verification scaffold for Admin.
+ * This route maps to the backend verification queue rather than pretending to
+ * be a generic host directory with fabricated approval data.
+ */
 export default function Hosts() {
   return (
-    <section className="min-h-[50vh] bg-[#FAF9F6] p-8">
-      <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D4A72C]">
-          ADMIN
-        </p>
-        <h1 className="mt-2 text-3xl font-extrabold text-[#172554]">Hosts</h1>
-        <p className="mt-3 text-[#64748B]">
-          Replace this starter content with the final Hosts interface.
-        </p>
-      </div>
-    </section>
+    <AdminPlaceholderPage
+      eyebrow="TRUST OPERATIONS"
+      title="Host Verification"
+      description="The verification queue will use genuine host-verification records and review actions from the backend. No sample host approvals are shown in Phase 1."
+      contractItems={[
+        {
+          title: "Verification queue",
+          description:
+            "Uses GET /admin/host-verifications and GET /admin/host-verifications/pending.",
+        },
+        {
+          title: "Review outcome",
+          description:
+            "Uses PATCH /admin/host-verifications/{id}/status after confirmation UI is built.",
+        },
+      ]}
+    />
   );
 }

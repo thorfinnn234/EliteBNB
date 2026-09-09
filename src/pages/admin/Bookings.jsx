@@ -1,15 +1,26 @@
+import AdminPlaceholderPage from "../../components/admin/AdminPlaceholderPage";
+
+/**
+ * Admin Bookings scaffold.
+ * Status updates are sensitive, so Phase 1 only confirms the route while the
+ * later implementation can add detail review and confirmation controls.
+ */
 export default function Bookings() {
   return (
-    <section className="min-h-[50vh] bg-[#FAF9F6] p-8">
-      <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D4A72C]">
-          ADMIN
-        </p>
-        <h1 className="mt-2 text-3xl font-extrabold text-[#172554]">Bookings</h1>
-        <p className="mt-3 text-[#64748B]">
-          Replace this starter content with the final Bookings interface.
-        </p>
-      </div>
-    </section>
+    <AdminPlaceholderPage
+      eyebrow="RESERVATION OVERSIGHT"
+      title="Bookings"
+      description="Real reservation records will be loaded here through the Admin booking endpoints. The foundation avoids fake booking rows or unsupported actions."
+      contractItems={[
+        {
+          title: "Booking records",
+          description: "Uses GET /admin/bookings and GET /admin/bookings/{id}.",
+        },
+        {
+          title: "Status governance",
+          description: "Uses PATCH /admin/bookings/{id}/status once Admin confirmation flows are added.",
+        },
+      ]}
+    />
   );
 }

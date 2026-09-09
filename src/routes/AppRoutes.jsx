@@ -3,13 +3,16 @@ import AdminLayout from "../layouts/AdminLayout";
 import HostLayout from "../layouts/HostLayout";
 import PublicLayout from "../layouts/PublicLayout";
 import UserLayout from "../layouts/UserLayout";
+import AdminAuditLogs from "../pages/admin/AuditLogs";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminBookings from "../pages/admin/Bookings";
 import AdminHosts from "../pages/admin/Hosts";
-import AdminListings from "../pages/admin/Listings";
+import AdminNotifications from "../pages/admin/Notifications";
+import AdminPayments from "../pages/admin/Payments";
+import AdminProperties from "../pages/admin/Properties";
+import AdminRefunds from "../pages/admin/Refunds";
 import AdminReports from "../pages/admin/Reports";
-import AdminReviews from "../pages/admin/Reviews";
-import AdminTransactions from "../pages/admin/Transactions";
+import AdminSettings from "../pages/admin/Settings";
 import AdminUsers from "../pages/admin/Users";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import Login from "../pages/auth/Login";
@@ -79,8 +82,9 @@ function HostPage({ children }) {
 }
 
 /**
- * Wraps ADMIN placeholders with the existing frontend role guard and layout.
- * Admin pages remain placeholders until the Admin development phase begins.
+ * Wraps ADMIN pages with the existing frontend role guard and layout.
+ * Phase 1 establishes protected Admin foundations without weakening backend
+ * ADMIN role authorization.
  */
 function AdminPage({ children }) {
   return (
@@ -255,11 +259,14 @@ export default function AppRoutes() {
       <Route path="/admin/dashboard" element={<AdminPage><AdminDashboard /></AdminPage>} />
       <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
       <Route path="/admin/hosts" element={<AdminPage><AdminHosts /></AdminPage>} />
-      <Route path="/admin/listings" element={<AdminPage><AdminListings /></AdminPage>} />
+      <Route path="/admin/properties" element={<AdminPage><AdminProperties /></AdminPage>} />
       <Route path="/admin/bookings" element={<AdminPage><AdminBookings /></AdminPage>} />
-      <Route path="/admin/transactions" element={<AdminPage><AdminTransactions /></AdminPage>} />
-      <Route path="/admin/reviews" element={<AdminPage><AdminReviews /></AdminPage>} />
+      <Route path="/admin/payments" element={<AdminPage><AdminPayments /></AdminPage>} />
+      <Route path="/admin/refunds" element={<AdminPage><AdminRefunds /></AdminPage>} />
       <Route path="/admin/reports" element={<AdminPage><AdminReports /></AdminPage>} />
+      <Route path="/admin/audit-logs" element={<AdminPage><AdminAuditLogs /></AdminPage>} />
+      <Route path="/admin/notifications" element={<AdminPage><AdminNotifications /></AdminPage>} />
+      <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

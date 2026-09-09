@@ -1,15 +1,27 @@
+import AdminPlaceholderPage from "../../components/admin/AdminPlaceholderPage";
+
+/**
+ * Admin Reports scaffold.
+ * Review/content moderation is intentionally routed through Reports because
+ * the finalized backend does not expose a standalone Admin reviews endpoint.
+ */
 export default function Reports() {
   return (
-    <section className="min-h-[50vh] bg-[#FAF9F6] p-8">
-      <div className="mx-auto max-w-6xl rounded-2xl border border-[#E5E7EB] bg-white p-6">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#D4A72C]">
-          ADMIN
-        </p>
-        <h1 className="mt-2 text-3xl font-extrabold text-[#172554]">Reports</h1>
-        <p className="mt-3 text-[#64748B]">
-          Replace this starter content with the final Reports interface.
-        </p>
-      </div>
-    </section>
+    <AdminPlaceholderPage
+      eyebrow="MODERATION DESK"
+      title="Reports"
+      description="Reports will become the supported moderation surface for content and review issues. Phase 1 does not invent a separate Admin reviews contract."
+      contractItems={[
+        {
+          title: "Moderation queue",
+          description: "Uses GET /admin/reports and GET /admin/reports/{id}.",
+        },
+        {
+          title: "Report decisions",
+          description:
+            "Uses PATCH /admin/reports/{id}/status and POST /admin/reports/{id}/moderate.",
+        },
+      ]}
+    />
   );
 }
