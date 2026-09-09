@@ -85,6 +85,7 @@ export const adminService = {
     api.post(`/admin/reports/${id}/moderate`, payload, config),
 
   getAuditLogs: (params) => getWithParams("/admin/audit-logs", params),
+  getAuditLog: (id) => api.get(`/admin/audit-logs/${id}`),
   getAuditLogById: (id) => api.get(`/admin/audit-logs/${id}`),
 
   getNotifications: (params) =>
