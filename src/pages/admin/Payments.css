@@ -1,0 +1,961 @@
+.elite-admin-payments {
+  display: grid;
+  gap: clamp(1.05rem, 2vw, 1.55rem);
+  max-width: 100%;
+  min-width: 0;
+  color: #111827;
+}
+
+.elite-admin-payments,
+.elite-admin-payments * {
+  box-sizing: border-box;
+}
+
+.elite-admin-payments__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(14rem, 18rem);
+  gap: 0.9rem;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.elite-admin-payments__header > div,
+.elite-admin-payments__header > aside,
+.elite-admin-payments__filters,
+.elite-admin-payments__ledger {
+  min-width: 0;
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  border-radius: 0.9rem;
+  background: #fff;
+  box-shadow: 0 0.9rem 2rem rgba(15, 23, 42, 0.04);
+}
+
+.elite-admin-payments__header > div {
+  padding: clamp(1.25rem, 2.4vw, 1.85rem);
+}
+
+.elite-admin-payments__header span,
+.elite-admin-payments__ledger-heading span,
+.elite-admin-payments__reference span,
+.elite-admin-payments__amount span,
+.elite-admin-payments__states > span,
+.elite-admin-payments__context span,
+.elite-admin-payments__meta > span,
+.elite-admin-payments__drawer-header > span,
+.elite-admin-payments__detail-section > span,
+.elite-admin-payments__status-panel > span,
+.elite-admin-payments__confirm label span {
+  color: #8a6500;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.elite-admin-payments__header h2 {
+  margin: 0.35rem 0 0;
+  color: #172554;
+  font-size: clamp(2.15rem, 3.2vw, 3.35rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.elite-admin-payments__header p {
+  max-width: 46rem;
+  margin: 0.85rem 0 0;
+  color: #64748b;
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.elite-admin-payments__header > aside {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 0.42rem;
+  overflow: hidden;
+  border-color: rgba(212, 167, 44, 0.18);
+  background: #fffefb;
+  padding: 1.05rem 1.15rem;
+}
+
+.elite-admin-payments__header > aside::before {
+  position: absolute;
+  top: 1.05rem;
+  bottom: 1.05rem;
+  left: 0;
+  width: 3px;
+  background: #d4a72c;
+  content: "";
+}
+
+.elite-admin-payments__header > aside svg {
+  color: #8a6500;
+}
+
+.elite-admin-payments__header > aside strong {
+  color: #172554;
+  font-size: 1.18rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.elite-admin-payments__header > aside small {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.elite-admin-payments__filters {
+  display: grid;
+  gap: 0.85rem;
+  border-color: rgba(23, 37, 84, 0.08);
+  background: #fffefb;
+  padding: 0.95rem;
+}
+
+.elite-admin-payments__filter-row {
+  display: grid;
+  min-width: 0;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.elite-admin-payments__filter-row--primary {
+  grid-template-columns: minmax(16rem, 1fr) minmax(9rem, 12rem) minmax(9rem, 12rem) auto;
+}
+
+.elite-admin-payments__filter-row--secondary {
+  grid-template-columns: repeat(4, minmax(8rem, 1fr));
+}
+
+.elite-admin-payments__search-field,
+.elite-admin-payments__select-field,
+.elite-admin-payments__input-field,
+.elite-admin-payments__confirm label {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.elite-admin-payments__search-field label,
+.elite-admin-payments__select-field span,
+.elite-admin-payments__input-field span {
+  color: #172554;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.elite-admin-payments__search-field svg {
+  position: absolute;
+  left: 0.85rem;
+  bottom: 0.84rem;
+  color: #64748b;
+  pointer-events: none;
+}
+
+.elite-admin-payments__search-field input,
+.elite-admin-payments__select-field select,
+.elite-admin-payments__input-field input,
+.elite-admin-payments__confirm select {
+  width: 100%;
+  min-height: 2.8rem;
+  border: 1px solid rgba(23, 37, 84, 0.12);
+  border-radius: 0.7rem;
+  background-color: #faf9f6;
+  color: #111827;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.elite-admin-payments__search-field input {
+  padding: 0.82rem 0.95rem 0.82rem 2.45rem;
+}
+
+.elite-admin-payments__input-field input {
+  padding: 0.82rem 0.95rem;
+}
+
+.elite-admin-payments__select-field select,
+.elite-admin-payments__confirm select {
+  /* The global select rule supplies one shared chevron. This scoped rule hides
+     native arrows only, so Admin filters do not show duplicate indicators. */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-position: right 0.9rem center;
+  padding: 0.82rem 2.55rem 0.82rem 0.95rem;
+}
+
+.elite-admin-payments__search-field input:hover,
+.elite-admin-payments__select-field select:hover,
+.elite-admin-payments__input-field input:hover,
+.elite-admin-payments__confirm select:hover {
+  border-color: rgba(23, 37, 84, 0.28);
+  background-color: #fff;
+}
+
+.elite-admin-payments__search-field input:focus,
+.elite-admin-payments__select-field select:focus,
+.elite-admin-payments__input-field input:focus,
+.elite-admin-payments__confirm select:focus {
+  border-color: rgba(212, 167, 44, 0.78);
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(212, 167, 44, 0.14);
+  outline: none;
+}
+
+.elite-admin-payments__filter-actions,
+.elite-admin-payments__actions,
+.elite-admin-payments__confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.elite-admin-payments__filter-actions {
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
+.elite-admin-payments__filter-actions button,
+.elite-admin-payments__ledger-heading button,
+.elite-admin-payments__actions button,
+.elite-admin-payments__empty-state button,
+.elite-admin-payments__status-panel button,
+.elite-admin-payments__confirm-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(23, 37, 84, 0.14);
+  border-radius: 0.72rem;
+  background: #fff;
+  color: #172554;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+  min-height: 2.45rem;
+  padding: 0.65rem 0.9rem;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.elite-admin-payments__filter-actions button[type="submit"],
+.elite-admin-payments__empty-state button,
+.elite-admin-payments__confirm-actions button.is-pending {
+  border-color: #172554;
+  background: #172554;
+  color: #fff;
+}
+
+.elite-admin-payments__confirm-actions button.is-failed {
+  border-color: rgba(220, 38, 38, 0.24);
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+.elite-admin-payments__filter-actions button:hover,
+.elite-admin-payments__filter-actions button:focus-visible,
+.elite-admin-payments__ledger-heading button:hover,
+.elite-admin-payments__ledger-heading button:focus-visible,
+.elite-admin-payments__actions button:hover,
+.elite-admin-payments__actions button:focus-visible,
+.elite-admin-payments__empty-state button:hover,
+.elite-admin-payments__empty-state button:focus-visible,
+.elite-admin-payments__status-panel button:hover,
+.elite-admin-payments__status-panel button:focus-visible,
+.elite-admin-payments__confirm-actions button:hover,
+.elite-admin-payments__confirm-actions button:focus-visible,
+.elite-admin-payments__drawer-close:hover,
+.elite-admin-payments__drawer-close:focus-visible {
+  border-color: rgba(212, 167, 44, 0.6);
+  outline: 2px solid rgba(212, 167, 44, 0.38);
+  outline-offset: 2px;
+  transform: translateY(-1px);
+}
+
+.elite-admin-payments__filter-actions button[type="submit"]:hover,
+.elite-admin-payments__filter-actions button[type="submit"]:focus-visible,
+.elite-admin-payments__empty-state button:hover,
+.elite-admin-payments__empty-state button:focus-visible,
+.elite-admin-payments__confirm-actions button.is-pending:hover,
+.elite-admin-payments__confirm-actions button.is-pending:focus-visible {
+  background: #111827;
+}
+
+.elite-admin-payments__filter-actions button:disabled,
+.elite-admin-payments__ledger-heading button:disabled,
+.elite-admin-payments__confirm-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+  transform: none;
+}
+
+.elite-admin-payments__feedback {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-radius: 0.85rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.elite-admin-payments__feedback.is-error {
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+.elite-admin-payments__feedback.is-success {
+  border: 1px solid rgba(22, 163, 74, 0.18);
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.elite-admin-payments__ledger {
+  overflow: hidden;
+}
+
+.elite-admin-payments__ledger-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(23, 37, 84, 0.08);
+  background: #fffefb;
+  padding: 1.05rem 1.2rem;
+}
+
+.elite-admin-payments__ledger-heading h3 {
+  margin: 0.18rem 0 0;
+  color: #172554;
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.elite-admin-payments__ledger-heading button {
+  min-width: 6.5rem;
+}
+
+.elite-admin-payments__skeleton {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.elite-admin-payments__skeleton span {
+  min-height: 6rem;
+  border: 1px solid rgba(23, 37, 84, 0.06);
+  border-radius: 0.85rem;
+  background: #f8fafc;
+  animation: elite-admin-payments-pulse 1.35s ease-in-out infinite alternate;
+}
+
+.elite-admin-payments__empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+  padding: clamp(2rem, 5vw, 3.5rem) 1rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.elite-admin-payments__empty-state svg {
+  color: #8a6500;
+}
+
+.elite-admin-payments__empty-state h3 {
+  margin: 0;
+  color: #172554;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.elite-admin-payments__empty-state p {
+  max-width: 31rem;
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.65;
+}
+
+.elite-admin-payments__list {
+  display: grid;
+  gap: 0.78rem;
+  padding: 1rem;
+}
+
+.elite-admin-payments__row {
+  display: grid;
+  grid-template-columns:
+    minmax(9rem, 1fr)
+    minmax(8rem, 0.7fr)
+    minmax(8.4rem, 0.72fr)
+    minmax(10rem, 1fr)
+    minmax(10rem, 1fr)
+    minmax(8rem, 0.74fr)
+    minmax(7.5rem, 0.66fr);
+  gap: 0.85rem;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 0.86rem;
+  background: #fff;
+  padding: 0.86rem;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.elite-admin-payments__row:hover {
+  border-color: rgba(212, 167, 44, 0.28);
+  box-shadow: inset 3px 0 0 #d4a72c, 0 1rem 2.4rem rgba(15, 23, 42, 0.045);
+  transform: translateY(-1px);
+}
+
+.elite-admin-payments__reference,
+.elite-admin-payments__amount,
+.elite-admin-payments__states,
+.elite-admin-payments__context,
+.elite-admin-payments__meta {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.elite-admin-payments__reference strong,
+.elite-admin-payments__amount strong,
+.elite-admin-payments__context strong {
+  overflow: hidden;
+  color: #172554;
+  font-size: 0.9rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elite-admin-payments__amount strong {
+  font-size: 1.05rem;
+}
+
+.elite-admin-payments__reference small,
+.elite-admin-payments__amount small,
+.elite-admin-payments__context small,
+.elite-admin-payments__meta small,
+.elite-admin-payments__actions small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.elite-admin-payments__states {
+  align-content: start;
+}
+
+.elite-admin-payments__badge,
+.elite-admin-payments__provider {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  gap: 0.36rem;
+  border: 1px solid rgba(23, 37, 84, 0.12);
+  border-radius: 999px;
+  padding: 0.34rem 0.58rem;
+  font-size: 0.7rem;
+  font-weight: 950;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.elite-admin-payments__provider {
+  border-color: rgba(23, 37, 84, 0.14);
+  background: #f8fafc;
+  color: #172554;
+}
+
+.elite-admin-payments__badge--payment-SUCCESS,
+.elite-admin-payments__badge--booking-CONFIRMED {
+  border-color: rgba(22, 163, 74, 0.22);
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.elite-admin-payments__badge--payment-PENDING,
+.elite-admin-payments__badge--booking-PENDING {
+  border-color: rgba(212, 167, 44, 0.34);
+  background: #fffaf0;
+  color: #8a6500;
+}
+
+.elite-admin-payments__badge--payment-FAILED,
+.elite-admin-payments__badge--booking-CANCELLED {
+  border-color: rgba(220, 38, 38, 0.18);
+  background: #fff1f2;
+  color: #991b1b;
+}
+
+.elite-admin-payments__badge--booking-COMPLETED,
+.elite-admin-payments__badge--payment-UNKNOWN,
+.elite-admin-payments__badge--booking-UNKNOWN {
+  border-color: rgba(100, 116, 139, 0.18);
+  background: #f8fafc;
+  color: #475569;
+}
+
+.elite-admin-payments__actions {
+  display: grid;
+  justify-content: stretch;
+  min-width: 0;
+}
+
+.elite-admin-payments__actions button {
+  width: 100%;
+  min-height: 2.24rem;
+  padding: 0.54rem 0.62rem;
+  font-size: 0.76rem;
+}
+
+.elite-admin-payments__actions button:first-child {
+  border-color: rgba(23, 37, 84, 0.2);
+  background: #172554;
+  color: #fff;
+}
+
+.elite-admin-payments__actions button:first-child:hover,
+.elite-admin-payments__actions button:first-child:focus-visible {
+  background: #111827;
+}
+
+.elite-admin-payments__actions small {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.24rem;
+}
+
+.elite-admin-payments__mobile-list {
+  display: none;
+  gap: 0.85rem;
+  padding: 1rem;
+}
+
+.elite-admin-payments__mobile-card {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  border-radius: 0.9rem;
+  background: #fff;
+  padding: 0.95rem;
+}
+
+.elite-admin-payments__mobile-header,
+.elite-admin-payments__mobile-statuses {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.elite-admin-payments__mobile-header > span {
+  overflow: hidden;
+  color: #8a6500;
+  font-size: 0.74rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.elite-admin-payments__mobile-card > strong {
+  color: #172554;
+  font-size: 1.35rem;
+  font-weight: 950;
+  line-height: 1.1;
+}
+
+.elite-admin-payments__mobile-card p,
+.elite-admin-payments__mobile-statuses small {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.elite-admin-payments__mobile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.elite-admin-payments__mobile-grid span {
+  display: grid;
+  gap: 0.2rem;
+  border-top: 1px solid rgba(23, 37, 84, 0.08);
+  padding-top: 0.55rem;
+  color: #111827;
+  font-size: 0.86rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.elite-admin-payments__mobile-grid small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.elite-admin-payments__overlay,
+.elite-admin-payments__confirm-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(17, 24, 39, 0.38);
+}
+
+.elite-admin-payments__overlay {
+  z-index: 130;
+}
+
+.elite-admin-payments__confirm-overlay {
+  z-index: 150;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.elite-admin-payments__drawer {
+  position: relative;
+  width: min(38rem, 100%);
+  height: 100%;
+  overflow-y: auto;
+  border-left: 1px solid rgba(23, 37, 84, 0.12);
+  background: #faf9f6;
+  box-shadow: -1rem 0 3rem rgba(15, 23, 42, 0.16);
+  padding: clamp(1.15rem, 2.2vw, 1.6rem);
+}
+
+.elite-admin-payments__drawer-close {
+  position: sticky;
+  top: 0.25rem;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  margin-left: auto;
+  border: 1px solid rgba(23, 37, 84, 0.14);
+  border-radius: 999px;
+  background: #fff;
+  color: #172554;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.elite-admin-payments__drawer-state {
+  display: grid;
+  min-height: 16rem;
+  place-items: center;
+  align-content: center;
+  gap: 0.65rem;
+  color: #64748b;
+  font-size: 0.92rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.elite-admin-payments__drawer-state svg {
+  color: #8a6500;
+}
+
+.elite-admin-payments__drawer-header {
+  display: grid;
+  gap: 0.65rem;
+  border-bottom: 1px solid rgba(23, 37, 84, 0.1);
+  padding: 0.75rem 0 1.1rem;
+}
+
+.elite-admin-payments__drawer-header h3 {
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: #172554;
+  font-size: clamp(1.6rem, 3.4vw, 2.35rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.elite-admin-payments__drawer-header p,
+.elite-admin-payments__status-panel p,
+.elite-admin-payments__confirm p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.elite-admin-payments__drawer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.elite-admin-payments__detail-section,
+.elite-admin-payments__status-panel {
+  display: grid;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(23, 37, 84, 0.08);
+  padding: 1.1rem 0;
+}
+
+.elite-admin-payments__detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.elite-admin-payments__detail-grid > div {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  min-width: 0;
+  border: 1px solid rgba(23, 37, 84, 0.08);
+  border-radius: 0.78rem;
+  background: #fff;
+  padding: 0.75rem;
+}
+
+.elite-admin-payments__detail-grid svg {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+  color: #8a6500;
+}
+
+.elite-admin-payments__detail-grid span {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #111827;
+  font-size: 0.88rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.elite-admin-payments__detail-grid small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.elite-admin-payments__status-panel {
+  border-bottom: 0;
+}
+
+.elite-admin-payments__status-panel button {
+  justify-self: start;
+  border-color: #172554;
+  background: #172554;
+  color: #fff;
+}
+
+.elite-admin-payments__status-panel button:hover,
+.elite-admin-payments__status-panel button:focus-visible {
+  background: #111827;
+}
+
+.elite-admin-payments__confirm {
+  display: grid;
+  width: min(31rem, 100%);
+  max-height: min(90vh, 42rem);
+  overflow-y: auto;
+  gap: 0.8rem;
+  border: 1px solid rgba(23, 37, 84, 0.14);
+  border-radius: 0.95rem;
+  background: #fff;
+  box-shadow: 0 1.5rem 4rem rgba(15, 23, 42, 0.2);
+  padding: clamp(1.15rem, 3vw, 1.55rem);
+}
+
+.elite-admin-payments__confirm-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  border: 1px solid rgba(212, 167, 44, 0.24);
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #8a6500;
+}
+
+.elite-admin-payments__confirm h3 {
+  margin: 0;
+  color: #172554;
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.elite-admin-payments__confirm-error {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(220, 38, 38, 0.18);
+  border-radius: 0.8rem;
+  background: #fff1f2;
+  color: #991b1b;
+  padding: 0.75rem 0.85rem;
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.elite-admin-payments__confirm-actions {
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+@keyframes elite-admin-payments-pulse {
+  from {
+    opacity: 0.62;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1280px) {
+  .elite-admin-payments__row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .elite-admin-payments__actions {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 10rem));
+  }
+}
+
+@media (max-width: 1180px) {
+  .elite-admin-payments__filter-row--primary {
+    grid-template-columns: minmax(14rem, 1fr) minmax(9rem, 11rem);
+  }
+
+  .elite-admin-payments__filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    min-width: 0;
+  }
+
+  .elite-admin-payments__filter-row--secondary {
+    grid-template-columns: repeat(2, minmax(8rem, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .elite-admin-payments__header {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-admin-payments__filter-row--primary,
+  .elite-admin-payments__filter-row--secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .elite-admin-payments__search-field {
+    grid-column: 1 / -1;
+  }
+
+  .elite-admin-payments__list--desktop {
+    display: none;
+  }
+
+  .elite-admin-payments__mobile-list {
+    display: grid;
+  }
+}
+
+@media (max-width: 640px) {
+  .elite-admin-payments__header > div,
+  .elite-admin-payments__header > aside,
+  .elite-admin-payments__filters,
+  .elite-admin-payments__ledger {
+    border-radius: 0.78rem;
+  }
+
+  .elite-admin-payments__filter-row--primary,
+  .elite-admin-payments__filter-row--secondary,
+  .elite-admin-payments__detail-grid,
+  .elite-admin-payments__mobile-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .elite-admin-payments__filter-actions,
+  .elite-admin-payments__actions,
+  .elite-admin-payments__confirm-actions {
+    flex-direction: column;
+  }
+
+  .elite-admin-payments__filter-actions button,
+  .elite-admin-payments__actions button,
+  .elite-admin-payments__confirm-actions button {
+    width: 100%;
+  }
+
+  .elite-admin-payments__drawer {
+    width: 100%;
+    border-left: 0;
+  }
+
+  .elite-admin-payments__confirm-overlay {
+    align-items: flex-end;
+    padding: 0.7rem;
+  }
+
+  .elite-admin-payments__confirm {
+    max-height: 88vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .elite-admin-payments__skeleton span {
+    animation: none;
+  }
+
+  .elite-admin-payments__filter-actions button,
+  .elite-admin-payments__ledger-heading button,
+  .elite-admin-payments__actions button,
+  .elite-admin-payments__empty-state button,
+  .elite-admin-payments__status-panel button,
+  .elite-admin-payments__confirm-actions button,
+  .elite-admin-payments__drawer-close,
+  .elite-admin-payments__row {
+    transition: none;
+  }
+}
