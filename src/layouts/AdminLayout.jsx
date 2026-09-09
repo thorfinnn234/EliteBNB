@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { cloneElement, isValidElement, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminMobileNav from "../components/admin/AdminMobileNav";
 import AdminSidebar from "../components/admin/AdminSidebar";
@@ -42,6 +42,17 @@ export default function AdminLayout({ children }) {
     setMobileMoreOpen(true);
   }, []);
 
+  /**
+   * Gives Admin feature pages a narrow way to synchronize shell notification
+   * badges after read-state mutations, without introducing a broad global store.
+   */
+  const adminContent = isValidElement(children)
+    ? cloneElement(children, {
+        notificationUnreadCount,
+        onNotificationUnreadCountChange: handleNotificationUnreadCountChange,
+      })
+    : children;
+
   return (
     <div className="elite-admin-shell">
       <AdminSidebar
@@ -59,7 +70,7 @@ export default function AdminLayout({ children }) {
           }
         />
 
-        <main className="elite-admin-content">{children}</main>
+        <main className="elite-admin-content">{adminContent}</main>
       </div>
 
       <AdminMobileNav
