@@ -3,6 +3,7 @@ import {
   Bell,
   Building2,
   CalendarDays,
+  LifeBuoy,
   LayoutDashboard,
   MessageSquare,
   Settings,
@@ -59,6 +60,12 @@ export const secondaryHostNavItems = [
     meta: "Inbox",
     icon: MessageSquare,
     to: "/host/messages",
+  },
+  {
+    label: "EliteBNB Support",
+    meta: "Admin help",
+    icon: LifeBuoy,
+    to: "/host/support",
   },
   {
     label: "Reviews",

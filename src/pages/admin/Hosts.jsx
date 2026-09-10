@@ -8,6 +8,7 @@ import {
   Eye,
   FileText,
   Mail,
+  MessageCircle,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -16,8 +17,14 @@ import {
   XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useBodyScrollLock } from "../../hooks/useBodyScrollLock";
 import { adminService } from "../../services/adminService";
+import { supportMessagingService } from "../../services/supportMessagingService";
+import {
+  getSupportConversationId,
+  normalizeSupportConversationPayload,
+} from "../../utils/supportMessagingMappers";
 import "./Hosts.css";
 
 const emptyFilters = {
@@ -409,8 +416,11 @@ function VerificationDocument({
 function VerificationDrawer({
   detailState,
   onClose,
+  onMessageHost,
   onPreviewImage,
   onReviewRequest,
+  supportError,
+  supportLoading,
 }) {
   const record = detailState.record;
 
@@ -513,6 +523,28 @@ function VerificationDrawer({
 
             <section className="elite-admin-hosts__review-panel">
               <span>Review outcome</span>
+              <div className="elite-admin-hosts__support-bridge">
+                <p>
+                  Open this Host's dedicated EliteBNB support conversation if
+                  the review needs clarification outside the Admin note.
+                </p>
+                <button
+                  disabled={supportLoading || !record.hostId}
+                  onClick={() => onMessageHost(record)}
+                  type="button"
+                >
+                  <MessageCircle size={16} aria-hidden="true" />
+                  {supportLoading ? "Opening support..." : "Message Host"}
+                </button>
+              </div>
+
+              {supportError ? (
+                <div className="elite-admin-hosts__confirm-error" role="alert">
+                  <AlertTriangle size={16} aria-hidden="true" />
+                  {supportError}
+                </div>
+              ) : null}
+
               {record.status === "PENDING" ? (
                 <>
                   <p>
@@ -681,6 +713,7 @@ function DocumentImageModal({ onClose, preview }) {
  * Production data comes only from the finalized Admin host-verification API.
  */
 export default function Hosts() {
+  const navigate = useNavigate();
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
   const [detailState, setDetailState] = useState({
     error: "",
@@ -693,6 +726,10 @@ export default function Hosts() {
   const [reloadToken, setReloadToken] = useState(0);
   const [reviewNote, setReviewNote] = useState("");
   const [reviewRequest, setReviewRequest] = useState(null);
+  const [supportState, setSupportState] = useState({
+    error: "",
+    loading: false,
+  });
   const [mutationState, setMutationState] = useState({
     error: "",
     loading: false,
@@ -868,6 +905,7 @@ export default function Hosts() {
       open: false,
       record: null,
     });
+    setSupportState({ error: "", loading: false });
   };
 
   /**
@@ -876,6 +914,7 @@ export default function Hosts() {
    */
   const handleReviewRequest = (record, status) => {
     setMutationState({ error: "", loading: false, success: "" });
+    setSupportState({ error: "", loading: false });
     setReviewNote(record?.adminNote || "");
     setReviewRequest({
       record,
@@ -888,6 +927,54 @@ export default function Hosts() {
     setReviewNote("");
     setReviewRequest(null);
     setMutationState({ error: "", loading: false, success: "" });
+  };
+
+  /**
+   * Opens the dedicated Host/Admin support thread for this verification record.
+   * The backend create-or-get endpoint owns the one-thread-per-Host rule, so the
+   * frontend only needs a real hostId and returned conversation id.
+   */
+  const handleMessageHost = async (record) => {
+    if (!record?.hostId) {
+      setSupportState({
+        error: "This verification record does not include a Host ID.",
+        loading: false,
+      });
+      return;
+    }
+
+    try {
+      setSupportState({ error: "", loading: true });
+
+      const response =
+        await supportMessagingService.createOrGetHostSupportConversation(
+          record.hostId
+        );
+      const normalizedThread = normalizeSupportConversationPayload(
+        response.data
+      );
+      const conversationId = getSupportConversationId(
+        normalizedThread.conversation
+      );
+
+      if (!conversationId) {
+        throw new Error("The backend did not return a support conversation id.");
+      }
+
+      navigate(
+        `/admin/host-support?conversation=${encodeURIComponent(
+          conversationId
+        )}`
+      );
+    } catch (error) {
+      setSupportState({
+        error: getErrorMessage(
+          error,
+          "Unable to open this Host support conversation."
+        ),
+        loading: false,
+      });
+    }
   };
 
   /**
@@ -1164,8 +1251,11 @@ export default function Hosts() {
         <VerificationDrawer
           detailState={detailState}
           onClose={handleCloseDetail}
+          onMessageHost={handleMessageHost}
           onPreviewImage={setDocumentPreview}
           onReviewRequest={handleReviewRequest}
+          supportError={supportState.error}
+          supportLoading={supportState.loading}
         />
       )}
 

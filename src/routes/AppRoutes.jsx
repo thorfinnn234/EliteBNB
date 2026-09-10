@@ -8,6 +8,7 @@ import AdminAuditLogs from "../pages/admin/AuditLogs";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminBookings from "../pages/admin/Bookings";
 import AdminHosts from "../pages/admin/Hosts";
+import AdminHostSupport from "../pages/admin/HostSupport";
 import AdminNotifications from "../pages/admin/Notifications";
 import AdminPayments from "../pages/admin/Payments";
 import AdminProperties from "../pages/admin/Properties";
@@ -35,6 +36,7 @@ import HostProfile from "../pages/host/HostProfile";
 import HostReservations from "../pages/host/Reservations";
 import HostReviews from "../pages/host/Reviews";
 import HostSettings from "../pages/host/Settings";
+import HostSupport from "../pages/host/Support";
 import HostVerification from "../pages/host/HostVerification";
 import Home from "../pages/public/Home";
 import PropertyDetails from "../pages/public/PropertyDetails";
@@ -275,6 +277,7 @@ export default function AppRoutes() {
       <Route path="/host/reservations" element={<HostBusinessPage><HostReservations /></HostBusinessPage>} />
       <Route path="/host/earnings" element={<HostBusinessPage><HostEarnings /></HostBusinessPage>} />
       <Route path="/host/profile" element={<HostPage><HostProfile /></HostPage>} />
+      <Route path="/host/support" element={<HostPage><HostSupport /></HostPage>} />
       <Route path="/host/messages" element={<HostBusinessPage><HostMessages /></HostBusinessPage>} />
       <Route path="/host/notifications" element={<HostBusinessPage><HostNotifications /></HostBusinessPage>} />
       <Route path="/host/reviews" element={<HostBusinessPage><HostReviews /></HostBusinessPage>} />
@@ -284,6 +287,7 @@ export default function AppRoutes() {
       <Route path="/admin/dashboard" element={<AdminPage><AdminDashboard /></AdminPage>} />
       <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
       <Route path="/admin/hosts" element={<AdminPage><AdminHosts /></AdminPage>} />
+      <Route path="/admin/host-support" element={<AdminPage><AdminHostSupport /></AdminPage>} />
       <Route path="/admin/properties" element={<AdminPage><AdminProperties /></AdminPage>} />
       <Route path="/admin/bookings" element={<AdminPage><AdminBookings /></AdminPage>} />
       <Route path="/admin/payments" element={<AdminPage><AdminPayments /></AdminPage>} />

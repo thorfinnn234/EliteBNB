@@ -8,6 +8,7 @@ import {
   Home,
   Loader2,
   LogOut,
+  MessageCircle,
   RefreshCw,
   ShieldCheck,
   UserRound,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import HostSupportDrawer from "../../components/host/HostSupportDrawer";
 import EliteLogo from "../../components/public/EliteLogo";
 import { useAuth } from "../../hooks/useAuth";
 import {
@@ -259,7 +261,7 @@ function LifecycleProgress({ lifecycleState, prerequisites }) {
  * Presents backend-returned verification metadata without displaying raw
  * document URLs as unattractive text or adding fake review estimates.
  */
-function VerificationSummary({ verification }) {
+function VerificationSummary({ onContactSupport, verification }) {
   if (!verification) return null;
 
   const documentHref = getDocumentHref(verification.documentUrl);
@@ -280,6 +282,16 @@ function VerificationSummary({ verification }) {
         <div className="elite-host-verification__admin-note">
           <strong>Admin note</strong>
           <p>{verification.adminNote}</p>
+          {onContactSupport ? (
+            <button
+              className="elite-host-verification__support-action"
+              onClick={onContactSupport}
+              type="button"
+            >
+              <MessageCircle size={16} aria-hidden="true" />
+              Contact EliteBNB Support
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -484,6 +496,7 @@ export default function HostVerification() {
   const displayName = getDisplayName(lifecycle.profile || auth.user);
   const [form, setForm] = useState(emptyVerificationForm);
   const [formSourceKey, setFormSourceKey] = useState("");
+  const [supportOpen, setSupportOpen] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -663,6 +676,14 @@ export default function HostVerification() {
             lifecycleState={lifecycle.lifecycleState}
             prerequisites={lifecycle.prerequisites}
           />
+          <button
+            className="elite-host-verification__support-action"
+            onClick={() => setSupportOpen(true)}
+            type="button"
+          >
+            <MessageCircle size={16} aria-hidden="true" />
+            Contact EliteBNB Support
+          </button>
         </aside>
       </section>
 
@@ -683,7 +704,10 @@ export default function HostVerification() {
             submitting={submitting}
             verification={lifecycle.verification}
           />
-          <VerificationSummary verification={lifecycle.verification} />
+          <VerificationSummary
+            onContactSupport={() => setSupportOpen(true)}
+            verification={lifecycle.verification}
+          />
         </section>
       ) : null}
 
@@ -698,7 +722,10 @@ export default function HostVerification() {
               and other Host business tools remain unavailable.
             </p>
           </section>
-          <VerificationSummary verification={lifecycle.verification} />
+          <VerificationSummary
+            onContactSupport={() => setSupportOpen(true)}
+            verification={lifecycle.verification}
+          />
         </section>
       ) : null}
 
@@ -721,6 +748,12 @@ export default function HostVerification() {
           </div>
         </section>
       ) : null}
+
+      <HostSupportDrawer
+        hostName={displayName}
+        onClose={() => setSupportOpen(false)}
+        open={supportOpen}
+      />
     </main>
   );
 }

@@ -210,6 +210,7 @@
 .elite-admin-hosts__actions button,
 .elite-admin-hosts__empty-state button,
 .elite-admin-hosts__primary-action,
+.elite-admin-hosts__support-bridge button,
 .elite-admin-hosts__document-preview button,
 .elite-admin-hosts__document-preview a,
 .elite-admin-hosts__document-card a,
@@ -255,6 +256,8 @@
 .elite-admin-hosts__empty-state button:focus-visible,
 .elite-admin-hosts__primary-action:hover,
 .elite-admin-hosts__primary-action:focus-visible,
+.elite-admin-hosts__support-bridge button:hover,
+.elite-admin-hosts__support-bridge button:focus-visible,
 .elite-admin-hosts__document-preview button:hover,
 .elite-admin-hosts__document-preview button:focus-visible,
 .elite-admin-hosts__document-preview a:hover,
@@ -344,6 +347,7 @@
 }
 
 .elite-admin-hosts__queue-heading button:disabled,
+.elite-admin-hosts__support-bridge button:disabled,
 .elite-admin-hosts__confirm-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.58;
@@ -679,6 +683,21 @@
   padding: 1.15rem 1.2rem;
 }
 
+.elite-admin-hosts__support-bridge {
+  display: grid;
+  gap: 0.7rem;
+  border: 1px solid rgba(212, 167, 44, 0.18);
+  border-radius: 0.85rem;
+  background: #fffefb;
+  padding: 0.9rem;
+}
+
+.elite-admin-hosts__support-bridge button {
+  width: fit-content;
+  border-color: rgba(212, 167, 44, 0.34);
+  background: #fffaf0;
+}
+
 .elite-admin-hosts__detail-grid {
   display: grid;
   gap: 0;
@@ -961,7 +980,8 @@
   .elite-admin-hosts__actions button,
   .elite-admin-hosts__review-panel-actions button,
   .elite-admin-hosts__confirm-actions button,
-  .elite-admin-hosts__primary-action {
+  .elite-admin-hosts__primary-action,
+  .elite-admin-hosts__support-bridge button {
     width: 100%;
   }
 

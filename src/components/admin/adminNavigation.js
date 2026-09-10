@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileWarning,
   LayoutDashboard,
+  MessageSquare,
   RotateCcw,
   ScrollText,
   Settings,
@@ -37,6 +38,13 @@ export const adminNavigationItems = [
     eyebrow: "Trust queue",
     to: "/admin/hosts",
     icon: ShieldCheck,
+  },
+  {
+    key: "host-support",
+    label: "Host Support",
+    eyebrow: "Support desk",
+    to: "/admin/host-support",
+    icon: MessageSquare,
   },
   {
     key: "properties",
