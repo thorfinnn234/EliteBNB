@@ -71,10 +71,12 @@ export default function HostOnboarding() {
 
       /*
        * Existing hosts who already completed onboarding
-       * should not be forced through it again.
+       * should not be forced through it again. They return to the lifecycle
+       * screen because completed onboarding does not necessarily mean Admin has
+       * verified business access yet.
        */
       if (data.hostOnboardingCompleted) {
-        navigate("/host/dashboard", {
+        navigate("/host/verification", {
           replace: true,
         });
         return;
@@ -227,6 +229,25 @@ export default function HostOnboarding() {
     });
   };
 
+  const completeOnboardingAndReturn = async ({
+    finalProgressAlreadySaved = false,
+  } = {}) => {
+    /*
+     * The backend lifecycle now checks `hostOnboardingCompleted` before Host
+     * verification submission. Saving the last screen is not enough; use the
+     * existing complete endpoint so the backend owns the completed flag.
+     */
+    if (!finalProgressAlreadySaved) {
+      await saveProgress(TOTAL_STEPS);
+    }
+
+    await hostOnboardingService.complete();
+
+    navigate("/host/verification", {
+      replace: true,
+    });
+  };
+
   const validateCurrentStep = () => {
     if (step === 2) {
       if (!form.phoneNumber.trim()) {
@@ -297,7 +318,9 @@ export default function HostOnboarding() {
         await saveProgress(nextStep);
 
         if (isFinalSetupStep) {
-          navigate("/host/dashboard");
+          await completeOnboardingAndReturn({
+            finalProgressAlreadySaved: true,
+          });
         } else {
           setStep(nextStep);
         }
@@ -328,7 +351,9 @@ export default function HostOnboarding() {
       await saveProgress(nextStep);
 
       if (isFinalSetupStep) {
-        navigate("/host/dashboard");
+        await completeOnboardingAndReturn({
+          finalProgressAlreadySaved: true,
+        });
       } else {
         setStep(nextStep);
       }
@@ -391,7 +416,7 @@ export default function HostOnboarding() {
 
       await saveProgress(step);
 
-      navigate("/host/dashboard");
+      navigate("/host/verification");
     } catch (err) {
       console.error(
         "Failed to save onboarding:",

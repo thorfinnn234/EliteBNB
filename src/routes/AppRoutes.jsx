@@ -3,13 +3,18 @@ import AdminLayout from "../layouts/AdminLayout";
 import HostLayout from "../layouts/HostLayout";
 import PublicLayout from "../layouts/PublicLayout";
 import UserLayout from "../layouts/UserLayout";
+import HostLifecycleGate from "../components/host/HostLifecycleGate";
+import AdminAuditLogs from "../pages/admin/AuditLogs";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminBookings from "../pages/admin/Bookings";
 import AdminHosts from "../pages/admin/Hosts";
-import AdminListings from "../pages/admin/Listings";
+import AdminHostSupport from "../pages/admin/HostSupport";
+import AdminNotifications from "../pages/admin/Notifications";
+import AdminPayments from "../pages/admin/Payments";
+import AdminProperties from "../pages/admin/Properties";
+import AdminRefunds from "../pages/admin/Refunds";
 import AdminReports from "../pages/admin/Reports";
-import AdminReviews from "../pages/admin/Reviews";
-import AdminTransactions from "../pages/admin/Transactions";
+import AdminSettings from "../pages/admin/Settings";
 import AdminUsers from "../pages/admin/Users";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import Login from "../pages/auth/Login";
@@ -31,6 +36,8 @@ import HostProfile from "../pages/host/HostProfile";
 import HostReservations from "../pages/host/Reservations";
 import HostReviews from "../pages/host/Reviews";
 import HostSettings from "../pages/host/Settings";
+import HostSupport from "../pages/host/Support";
+import HostVerification from "../pages/host/HostVerification";
 import Home from "../pages/public/Home";
 import PropertyDetails from "../pages/public/PropertyDetails";
 import Search from "../pages/public/Search";
@@ -79,8 +86,24 @@ function HostPage({ children }) {
 }
 
 /**
- * Wraps ADMIN placeholders with the existing frontend role guard and layout.
- * Admin pages remain placeholders until the Admin development phase begins.
+ * Wraps Host business pages with a lifecycle gate before mounting API-heavy
+ * screens. Profile, onboarding, and verification routes stay outside this guard
+ * because unverified Hosts are explicitly allowed to complete those steps.
+ */
+function HostBusinessPage({ children }) {
+  return (
+    <RoleRoute allowedRoles={["HOST"]}>
+      <HostLifecycleGate>
+        <HostLayout>{children}</HostLayout>
+      </HostLifecycleGate>
+    </RoleRoute>
+  );
+}
+
+/**
+ * Wraps ADMIN pages with the existing frontend role guard and layout.
+ * Phase 1 establishes protected Admin foundations without weakening backend
+ * ADMIN role authorization.
  */
 function AdminPage({ children }) {
   return (
@@ -237,29 +260,42 @@ export default function AppRoutes() {
           </RoleRoute>
         }
       />
-      <Route path="/host/dashboard" element={<HostPage><HostDashboard /></HostPage>} />
-      <Route path="/host/listings" element={<HostPage><HostListings /></HostPage>} />
-      <Route path="/host/listings/new" element={<HostPage><CreateListing /></HostPage>} />
-      <Route path="/host/listings/create" element={<HostPage><CreateListing /></HostPage>} />
-      <Route path="/host/listings/:id/edit" element={<HostPage><EditListing /></HostPage>} />
-      <Route path="/host/calendar" element={<HostPage><HostCalendar /></HostPage>} />
-      <Route path="/host/reservations" element={<HostPage><HostReservations /></HostPage>} />
-      <Route path="/host/earnings" element={<HostPage><HostEarnings /></HostPage>} />
+      <Route
+        path="/host/verification"
+        element={
+          <RoleRoute allowedRoles={["HOST"]}>
+            <HostVerification />
+          </RoleRoute>
+        }
+      />
+      <Route path="/host/dashboard" element={<HostBusinessPage><HostDashboard /></HostBusinessPage>} />
+      <Route path="/host/listings" element={<HostBusinessPage><HostListings /></HostBusinessPage>} />
+      <Route path="/host/listings/new" element={<HostBusinessPage><CreateListing /></HostBusinessPage>} />
+      <Route path="/host/listings/create" element={<HostBusinessPage><CreateListing /></HostBusinessPage>} />
+      <Route path="/host/listings/:id/edit" element={<HostBusinessPage><EditListing /></HostBusinessPage>} />
+      <Route path="/host/calendar" element={<HostBusinessPage><HostCalendar /></HostBusinessPage>} />
+      <Route path="/host/reservations" element={<HostBusinessPage><HostReservations /></HostBusinessPage>} />
+      <Route path="/host/earnings" element={<HostBusinessPage><HostEarnings /></HostBusinessPage>} />
       <Route path="/host/profile" element={<HostPage><HostProfile /></HostPage>} />
-      <Route path="/host/messages" element={<HostPage><HostMessages /></HostPage>} />
-      <Route path="/host/notifications" element={<HostPage><HostNotifications /></HostPage>} />
-      <Route path="/host/reviews" element={<HostPage><HostReviews /></HostPage>} />
-      <Route path="/host/settings" element={<HostPage><HostSettings /></HostPage>} />
+      <Route path="/host/support" element={<HostPage><HostSupport /></HostPage>} />
+      <Route path="/host/messages" element={<HostBusinessPage><HostMessages /></HostBusinessPage>} />
+      <Route path="/host/notifications" element={<HostBusinessPage><HostNotifications /></HostBusinessPage>} />
+      <Route path="/host/reviews" element={<HostBusinessPage><HostReviews /></HostBusinessPage>} />
+      <Route path="/host/settings" element={<HostBusinessPage><HostSettings /></HostBusinessPage>} />
 
       <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="/admin/dashboard" element={<AdminPage><AdminDashboard /></AdminPage>} />
       <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
       <Route path="/admin/hosts" element={<AdminPage><AdminHosts /></AdminPage>} />
-      <Route path="/admin/listings" element={<AdminPage><AdminListings /></AdminPage>} />
+      <Route path="/admin/host-support" element={<AdminPage><AdminHostSupport /></AdminPage>} />
+      <Route path="/admin/properties" element={<AdminPage><AdminProperties /></AdminPage>} />
       <Route path="/admin/bookings" element={<AdminPage><AdminBookings /></AdminPage>} />
-      <Route path="/admin/transactions" element={<AdminPage><AdminTransactions /></AdminPage>} />
-      <Route path="/admin/reviews" element={<AdminPage><AdminReviews /></AdminPage>} />
+      <Route path="/admin/payments" element={<AdminPage><AdminPayments /></AdminPage>} />
+      <Route path="/admin/refunds" element={<AdminPage><AdminRefunds /></AdminPage>} />
       <Route path="/admin/reports" element={<AdminPage><AdminReports /></AdminPage>} />
+      <Route path="/admin/audit-logs" element={<AdminPage><AdminAuditLogs /></AdminPage>} />
+      <Route path="/admin/notifications" element={<AdminPage><AdminNotifications /></AdminPage>} />
+      <Route path="/admin/settings" element={<AdminPage><AdminSettings /></AdminPage>} />
 
       <Route path="*" element={<NotFound />} />
     </Routes>

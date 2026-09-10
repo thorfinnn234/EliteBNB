@@ -1,0 +1,113 @@
+.elite-host-support-page {
+  display: grid;
+  gap: clamp(1rem, 2vw, 1.5rem);
+  width: min(100%, 62rem);
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+
+.elite-host-support-page,
+.elite-host-support-page * {
+  box-sizing: border-box;
+}
+
+.elite-host-support-page__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.elite-host-support-page__header > div,
+.elite-host-support-page__header > aside {
+  min-width: 0;
+  border: 1px solid rgba(23, 37, 84, 0.1);
+  border-radius: 0.85rem;
+  background: #ffffff;
+  box-shadow: 0 0.9rem 2rem rgba(15, 23, 42, 0.045);
+}
+
+.elite-host-support-page__header > div {
+  padding: clamp(1.15rem, 2.4vw, 1.65rem);
+}
+
+.elite-host-support-page__header span {
+  color: #8a6500;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.elite-host-support-page__header h1 {
+  margin: 0.35rem 0 0;
+  color: #172554;
+  font-size: clamp(1.8rem, 2.7vw, 2.45rem);
+  font-weight: 950;
+  letter-spacing: 0;
+  line-height: 1.04;
+}
+
+.elite-host-support-page__header p {
+  max-width: 42rem;
+  margin: 0.8rem 0 0;
+  color: #64748b;
+  font-size: 0.96rem;
+  line-height: 1.65;
+}
+
+.elite-host-support-page__header > aside {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 0.35rem;
+  overflow: hidden;
+  border-color: rgba(212, 167, 44, 0.18);
+  background: #fffefb;
+  padding: 1.05rem 1.15rem;
+}
+
+.elite-host-support-page__header > aside::before {
+  position: absolute;
+  top: 1.05rem;
+  bottom: 1.05rem;
+  left: 0;
+  width: 3px;
+  background: #d4a72c;
+  content: "";
+}
+
+.elite-host-support-page__header > aside svg {
+  color: #8a6500;
+}
+
+.elite-host-support-page__header > aside strong {
+  color: #172554;
+  font-size: 1.08rem;
+  font-weight: 950;
+}
+
+.elite-host-support-page__header > aside small {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .elite-host-support-page__header {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .elite-host-support-page {
+    width: 100%;
+    padding: 0.75rem;
+  }
+
+  .elite-host-support-page__header > div,
+  .elite-host-support-page__header > aside {
+    border-radius: 0.85rem;
+  }
+}

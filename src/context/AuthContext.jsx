@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AuthContext } from "./AuthContextBase";
+import { adminService } from "../services/adminService";
 import { hostProfileService } from "../services/hostProfileService";
 import { userService } from "../services/userService";
 
@@ -26,12 +27,13 @@ function clearStoredAuth() {
 
 /**
  * Returns the profile service that matches the previously authenticated role.
- * ADMIN has no confirmed profile endpoint yet, so refresh is intentionally not
- * restored for ADMIN until the backend exposes an authoritative contract.
+ * The saved role only chooses the restoration endpoint; each backend profile
+ * request still validates the Bearer token and rejects invalid sessions.
  */
 function getProfileServiceForRole(role) {
   if (role === "USER") return userService;
   if (role === "HOST") return hostProfileService;
+  if (role === "ADMIN") return adminService;
 
   return null;
 }
@@ -39,7 +41,7 @@ function getProfileServiceForRole(role) {
 /**
  * Normalizes supported profile response shapes into the shared user object.
  * The current services may return either the user directly or under a user key;
- * the fallback role preserves HOST/USER when a profile DTO omits `role`.
+ * the fallback role preserves the authenticated role when a profile DTO omits it.
  */
 function getUserFromResponse(response, fallbackRole) {
   const profile = response.data?.user ?? response.data;

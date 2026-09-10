@@ -651,6 +651,12 @@
   color: #166534;
 }
 
+.elite-host-dashboard__status.is-suspended,
+.elite-host-dashboard__status.is-rejected {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .elite-host-dashboard__status.is-muted {
   background: #e2e8f0;
   color: #475569;

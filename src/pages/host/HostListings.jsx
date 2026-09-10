@@ -14,6 +14,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { propertyService } from "../../services/propertyService";
+import {
+  getHostListingVisibility,
+  matchesHostListingVisibilityFilter,
+} from "../../utils/hostListingStatus";
 
 export default function HostListings() {
   const navigate = useNavigate();
@@ -56,15 +60,18 @@ export default function HostListings() {
       const location =
         listing.location || listing.city || listing.address || "";
 
-      const status = listing.status || "ACTIVE";
-
       const matchesSearch =
         title.toLowerCase().includes(search.toLowerCase()) ||
         location.toLowerCase().includes(search.toLowerCase());
 
-      const matchesStatus =
-        statusFilter === "All" ||
-        status.toUpperCase() === statusFilter.toUpperCase();
+      /*
+       * Host listing visibility is a combined presentation of operational
+       * status and approvalStatus. ACTIVE + PENDING_REVIEW is not public.
+       */
+      const matchesStatus = matchesHostListingVisibilityFilter(
+        listing,
+        statusFilter,
+      );
 
       return matchesSearch && matchesStatus;
     });
@@ -189,8 +196,8 @@ export default function HostListings() {
     }).format(amount || 0);
   };
 
-  const activeListings = listings.filter(
-    (listing) => (listing.status || "").toUpperCase() === "ACTIVE",
+  const liveListings = listings.filter(
+    (listing) => getHostListingVisibility(listing).label === "Live",
   ).length;
 
   if (loading) {
@@ -250,11 +257,11 @@ export default function HostListings() {
 
           <div className="rounded-2xl border border-[#E5E7EB] bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-[#64748B]">
-              Active Listings
+              Live Listings
             </p>
 
             <p className="mt-2 text-3xl font-bold text-[#172554]">
-              {activeListings}
+              {liveListings}
             </p>
           </div>
 
@@ -295,9 +302,11 @@ export default function HostListings() {
                 className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#172554] outline-none focus:border-[#D4A72C]"
               >
                 <option value="All">All Listings</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PENDING">Pending</option>
+                <option value="LIVE">Live</option>
+                <option value="PENDING_REVIEW">Pending review</option>
                 <option value="INACTIVE">Inactive</option>
+                <option value="SUSPENDED">Suspended</option>
+                <option value="REJECTED">Rejected</option>
               </select>
             </div>
           </div>
@@ -305,129 +314,147 @@ export default function HostListings() {
 
         {filteredListings.length > 0 ? (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredListings.map((listing) => (
-              <div
-                key={listing.id}
-                className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
-              >
-                <div className="relative h-56 overflow-hidden">
-                  <img
-                    src={getImage(listing)}
-                    alt={listing.title}
-                    className="h-full w-full object-cover"
-                  />
+            {filteredListings.map((listing) => {
+              const visibility = getHostListingVisibility(listing);
+              const publiclyVisible = visibility.label === "Live";
+              const statusToneClass =
+                visibility.className === "is-active"
+                  ? "bg-green-50 text-green-700"
+                  : visibility.className === "is-rejected" ||
+                      visibility.className === "is-suspended"
+                    ? "bg-red-50 text-red-700"
+                    : visibility.className === "is-pending"
+                      ? "bg-yellow-50 text-yellow-700"
+                      : "bg-slate-100 text-slate-700";
 
-                  <span
-                    className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${
-                      (listing.status || "").toUpperCase() === "ACTIVE"
-                        ? "bg-green-50 text-green-700"
-                        : (listing.status || "").toUpperCase() === "INACTIVE"
-                          ? "bg-slate-100 text-slate-700"
-                          : "bg-yellow-50 text-yellow-700"
-                    }`}
-                  >
-                    {listing.status || "ACTIVE"}
-                  </span>
-                </div>
+              return (
+                <div
+                  key={listing.id}
+                  className="overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-sm"
+                >
+                  <div className="relative h-56 overflow-hidden">
+                    <img
+                      src={getImage(listing)}
+                      alt={listing.title}
+                      className="h-full w-full object-cover"
+                    />
 
-                <div className="p-5">
-                  <h2 className="text-xl font-bold text-[#172554]">
-                    {listing.title}
-                  </h2>
-
-                  <div className="mt-2 flex items-start gap-1 text-sm text-[#64748B]">
-                    <MapPin size={16} className="mt-0.5 shrink-0" />
-                    <span>{getLocation(listing)}</span>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[#64748B]">
-                    <span className="flex items-center gap-1">
-                      <BedDouble size={16} />
-                      {listing.bedrooms || 0} bedrooms
-                    </span>
-
-                    <span>
-                      {listing.propertyType || listing.type || "Property"}
+                    <span
+                      className={`absolute left-4 top-4 rounded-full px-3 py-1 text-xs font-semibold ${statusToneClass}`}
+                    >
+                      {visibility.label}
                     </span>
                   </div>
 
-                  <div className="my-5 border-t border-[#F1F5F9]" />
+                  <div className="p-5">
+                    <h2 className="text-xl font-bold text-[#172554]">
+                      {listing.title}
+                    </h2>
 
-                  <div className="flex items-end justify-between">
-                    <div>
-                      <span className="text-xl font-bold text-[#172554]">
-                        {formatPrice(listing.pricePerNight)}
-                      </span>
-
-                      <span className="text-sm text-[#64748B]"> / night</span>
+                    <div className="mt-2 flex items-start gap-1 text-sm text-[#64748B]">
+                      <MapPin size={16} className="mt-0.5 shrink-0" />
+                      <span>{getLocation(listing)}</span>
                     </div>
 
-                    <span className="text-sm text-[#64748B]">
-                      Up to {listing.maxGuests || 0} guests
-                    </span>
-                  </div>
+                    <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-[#64748B]">
+                      <span className="flex items-center gap-1">
+                        <BedDouble size={16} />
+                        {listing.bedrooms || 0} bedrooms
+                      </span>
 
-                  <div className="mt-4 flex justify-end rounded-xl bg-[#FAF9F6] p-3 text-sm">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/property/${listing.id}`)}
-                      className="flex items-center gap-1 font-semibold text-[#D4A72C] hover:underline"
-                    >
-                      <Eye size={15} />
-                      View
-                    </button>
-                  </div>
+                      <span>
+                        {listing.propertyType || listing.type || "Property"}
+                      </span>
+                    </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        navigate(`/host/listings/${listing.id}/edit`)
-                      }
-                      className="flex items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2.5 text-sm font-semibold text-[#172554] transition hover:bg-[#FAF9F6]"
-                    >
-                      <Pencil size={16} />
-                      Edit
-                    </button>
+                    <p className="mt-3 rounded-xl bg-[#FAF9F6] px-3 py-2 text-xs font-semibold text-[#64748B]">
+                      {visibility.note}
+                    </p>
 
-                    <button
-                      type="button"
-                      disabled={changingStatusId === listing.id}
-                      onClick={() => handleStatusChange(listing)}
-                      className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
-                        (listing.status || "").toUpperCase() === "ACTIVE"
-                          ? "border-amber-200 text-amber-700 hover:bg-amber-50"
-                          : "border-green-200 text-green-700 hover:bg-green-50"
-                      }`}
-                    >
-                      {(listing.status || "").toUpperCase() === "ACTIVE" ? (
-                        <PowerOff size={16} />
+                    <div className="my-5 border-t border-[#F1F5F9]" />
+
+                    <div className="flex items-end justify-between">
+                      <div>
+                        <span className="text-xl font-bold text-[#172554]">
+                          {formatPrice(listing.pricePerNight)}
+                        </span>
+
+                        <span className="text-sm text-[#64748B]"> / night</span>
+                      </div>
+
+                      <span className="text-sm text-[#64748B]">
+                        Up to {listing.maxGuests || 0} guests
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex justify-end rounded-xl bg-[#FAF9F6] p-3 text-sm">
+                      {publiclyVisible ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/property/${listing.id}`)}
+                          className="flex items-center gap-1 font-semibold text-[#D4A72C] hover:underline"
+                        >
+                          <Eye size={15} />
+                          Public view
+                        </button>
                       ) : (
-                        <Power size={16} />
+                        <span className="text-xs font-semibold text-[#64748B]">
+                          Guest view unavailable until Live
+                        </span>
                       )}
+                    </div>
 
-                      {changingStatusId === listing.id
-                        ? "Updating..."
-                        : (listing.status || "").toUpperCase() === "ACTIVE"
-                          ? "Deactivate"
-                          : "Activate"}
-                    </button>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(`/host/listings/${listing.id}/edit`)
+                        }
+                        className="flex items-center justify-center gap-2 rounded-xl border border-[#E5E7EB] px-4 py-2.5 text-sm font-semibold text-[#172554] transition hover:bg-[#FAF9F6]"
+                      >
+                        <Pencil size={16} />
+                        Edit
+                      </button>
 
-                    <button
-                      type="button"
-                      disabled={deletingId === listing.id}
-                      onClick={() => handleDelete(listing.id)}
-                      className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-red-100 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                    >
-                      <Trash2 size={16} />
-                      {deletingId === listing.id
-                        ? "Deleting..."
-                        : "Delete Listing"}
-                    </button>
+                      <button
+                        type="button"
+                        disabled={changingStatusId === listing.id}
+                        onClick={() => handleStatusChange(listing)}
+                        className={`flex items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
+                          (listing.status || "").toUpperCase() === "ACTIVE"
+                            ? "border-amber-200 text-amber-700 hover:bg-amber-50"
+                            : "border-green-200 text-green-700 hover:bg-green-50"
+                        }`}
+                      >
+                        {(listing.status || "").toUpperCase() === "ACTIVE" ? (
+                          <PowerOff size={16} />
+                        ) : (
+                          <Power size={16} />
+                        )}
+
+                        {changingStatusId === listing.id
+                          ? "Updating..."
+                          : (listing.status || "").toUpperCase() === "ACTIVE"
+                            ? "Deactivate"
+                            : "Activate"}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={deletingId === listing.id}
+                        onClick={() => handleDelete(listing.id)}
+                        className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-red-100 px-4 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                      >
+                        <Trash2 size={16} />
+                        {deletingId === listing.id
+                          ? "Deleting..."
+                          : "Delete Listing"}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="rounded-2xl border border-[#E5E7EB] bg-white px-6 py-16 text-center shadow-sm">

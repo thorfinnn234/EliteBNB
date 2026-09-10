@@ -18,6 +18,7 @@ import { useAuth } from "../../hooks/useAuth";
 import { propertyService } from "../../services/propertyService";
 import { bookingService } from "../../services/bookingService";
 import { hostDashboardService } from "../../services/hostDashboardService";
+import { getHostListingVisibility } from "../../utils/hostListingStatus";
 import "./HostDashboard.css";
 
 const defaultStats = {
@@ -838,6 +839,7 @@ function EmptyOperationsState({ icon: Icon, title, description }) {
 function ListingPreviewCard({ listing, index, onManage }) {
   const image = getListingImage(listing);
   const isFeatured = index === 0;
+  const visibility = getHostListingVisibility(listing);
 
   return (
     <article
@@ -856,11 +858,9 @@ function ListingPreviewCard({ listing, index, onManage }) {
         )}
 
         <span
-          className={`elite-host-dashboard__status ${getStatusClasses(
-            listing.status
-          )}`}
+          className={`elite-host-dashboard__status ${visibility.className}`}
         >
-          {formatStatus(listing.status)}
+          {visibility.label}
         </span>
       </div>
 
@@ -886,6 +886,7 @@ function ListingPreviewCard({ listing, index, onManage }) {
             <BadgeCheck size={15} strokeWidth={1.9} />
             {listing.propertyType || listing.type || "Property"}
           </span>
+          <span>{visibility.note}</span>
         </div>
 
         <div className="elite-host-dashboard__listing-footer">

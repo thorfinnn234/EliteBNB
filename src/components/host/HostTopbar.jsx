@@ -40,6 +40,11 @@ const pageContexts = [
     eyebrow: "Messages",
   },
   {
+    match: "/host/support",
+    title: "EliteBNB support",
+    eyebrow: "Admin support",
+  },
+  {
     match: "/host/notifications",
     title: "Signal center",
     eyebrow: "Notifications",
