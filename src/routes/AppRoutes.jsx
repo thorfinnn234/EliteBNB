@@ -3,6 +3,7 @@ import AdminLayout from "../layouts/AdminLayout";
 import HostLayout from "../layouts/HostLayout";
 import PublicLayout from "../layouts/PublicLayout";
 import UserLayout from "../layouts/UserLayout";
+import HostLifecycleGate from "../components/host/HostLifecycleGate";
 import AdminAuditLogs from "../pages/admin/AuditLogs";
 import AdminDashboard from "../pages/admin/AdminDashboard";
 import AdminBookings from "../pages/admin/Bookings";
@@ -34,6 +35,7 @@ import HostProfile from "../pages/host/HostProfile";
 import HostReservations from "../pages/host/Reservations";
 import HostReviews from "../pages/host/Reviews";
 import HostSettings from "../pages/host/Settings";
+import HostVerification from "../pages/host/HostVerification";
 import Home from "../pages/public/Home";
 import PropertyDetails from "../pages/public/PropertyDetails";
 import Search from "../pages/public/Search";
@@ -77,6 +79,21 @@ function HostPage({ children }) {
   return (
     <RoleRoute allowedRoles={["HOST"]}>
       <HostLayout>{children}</HostLayout>
+    </RoleRoute>
+  );
+}
+
+/**
+ * Wraps Host business pages with a lifecycle gate before mounting API-heavy
+ * screens. Profile, onboarding, and verification routes stay outside this guard
+ * because unverified Hosts are explicitly allowed to complete those steps.
+ */
+function HostBusinessPage({ children }) {
+  return (
+    <RoleRoute allowedRoles={["HOST"]}>
+      <HostLifecycleGate>
+        <HostLayout>{children}</HostLayout>
+      </HostLifecycleGate>
     </RoleRoute>
   );
 }
@@ -241,19 +258,27 @@ export default function AppRoutes() {
           </RoleRoute>
         }
       />
-      <Route path="/host/dashboard" element={<HostPage><HostDashboard /></HostPage>} />
-      <Route path="/host/listings" element={<HostPage><HostListings /></HostPage>} />
-      <Route path="/host/listings/new" element={<HostPage><CreateListing /></HostPage>} />
-      <Route path="/host/listings/create" element={<HostPage><CreateListing /></HostPage>} />
-      <Route path="/host/listings/:id/edit" element={<HostPage><EditListing /></HostPage>} />
-      <Route path="/host/calendar" element={<HostPage><HostCalendar /></HostPage>} />
-      <Route path="/host/reservations" element={<HostPage><HostReservations /></HostPage>} />
-      <Route path="/host/earnings" element={<HostPage><HostEarnings /></HostPage>} />
+      <Route
+        path="/host/verification"
+        element={
+          <RoleRoute allowedRoles={["HOST"]}>
+            <HostVerification />
+          </RoleRoute>
+        }
+      />
+      <Route path="/host/dashboard" element={<HostBusinessPage><HostDashboard /></HostBusinessPage>} />
+      <Route path="/host/listings" element={<HostBusinessPage><HostListings /></HostBusinessPage>} />
+      <Route path="/host/listings/new" element={<HostBusinessPage><CreateListing /></HostBusinessPage>} />
+      <Route path="/host/listings/create" element={<HostBusinessPage><CreateListing /></HostBusinessPage>} />
+      <Route path="/host/listings/:id/edit" element={<HostBusinessPage><EditListing /></HostBusinessPage>} />
+      <Route path="/host/calendar" element={<HostBusinessPage><HostCalendar /></HostBusinessPage>} />
+      <Route path="/host/reservations" element={<HostBusinessPage><HostReservations /></HostBusinessPage>} />
+      <Route path="/host/earnings" element={<HostBusinessPage><HostEarnings /></HostBusinessPage>} />
       <Route path="/host/profile" element={<HostPage><HostProfile /></HostPage>} />
-      <Route path="/host/messages" element={<HostPage><HostMessages /></HostPage>} />
-      <Route path="/host/notifications" element={<HostPage><HostNotifications /></HostPage>} />
-      <Route path="/host/reviews" element={<HostPage><HostReviews /></HostPage>} />
-      <Route path="/host/settings" element={<HostPage><HostSettings /></HostPage>} />
+      <Route path="/host/messages" element={<HostBusinessPage><HostMessages /></HostBusinessPage>} />
+      <Route path="/host/notifications" element={<HostBusinessPage><HostNotifications /></HostBusinessPage>} />
+      <Route path="/host/reviews" element={<HostBusinessPage><HostReviews /></HostBusinessPage>} />
+      <Route path="/host/settings" element={<HostBusinessPage><HostSettings /></HostBusinessPage>} />
 
       <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
       <Route path="/admin/dashboard" element={<AdminPage><AdminDashboard /></AdminPage>} />

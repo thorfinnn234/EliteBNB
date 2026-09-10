@@ -18,6 +18,10 @@ import {
 
 import { hostProfileService } from "../../services/hostProfileService";
 import { useAuth } from "../../hooks/useAuth";
+import {
+  HOST_LIFECYCLE_STATES,
+  useHostLifecycle,
+} from "../../hooks/useHostLifecycle";
 
 const maskEmail = (email = "") => {
   const [name, domain] = email.split("@");
@@ -35,6 +39,7 @@ const maskEmail = (email = "") => {
 export default function HostProfile() {
   const fileInputRef = useRef(null);
   const auth = useAuth();
+  const hostLifecycle = useHostLifecycle();
 
   const [profile, setProfile] = useState(null);
 
@@ -317,6 +322,37 @@ export default function HostProfile() {
   const completionPercent = Math.round(
     (completedItems / completionItems.length) * 100
   );
+  const verificationBadge = (() => {
+    /*
+     * A HOST account is not automatically a VERIFIED Host. This badge mirrors
+     * the backend lifecycle instead of inferring business access from role.
+     */
+    if (hostLifecycle.lifecycleState === HOST_LIFECYCLE_STATES.VERIFIED) {
+      return {
+        className: "bg-green-50 text-green-700",
+        label: "Verified Host",
+      };
+    }
+
+    if (hostLifecycle.lifecycleState === HOST_LIFECYCLE_STATES.PENDING) {
+      return {
+        className: "bg-yellow-50 text-yellow-700",
+        label: "Verification pending",
+      };
+    }
+
+    if (hostLifecycle.lifecycleState === HOST_LIFECYCLE_STATES.REJECTED) {
+      return {
+        className: "bg-red-50 text-red-700",
+        label: "Verification needs attention",
+      };
+    }
+
+    return {
+      className: "bg-slate-100 text-slate-700",
+      label: "Verification required",
+    };
+  })();
 
   if (loading) {
     return (
@@ -447,8 +483,10 @@ export default function HostProfile() {
                 EliteBNB Host
               </p>
 
-              <div className="mt-3 inline-flex items-center rounded-full bg-green-50 px-3 py-1 text-sm font-semibold text-green-700">
-                Verified Host
+              <div
+                className={`mt-3 inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${verificationBadge.className}`}
+              >
+                {verificationBadge.label}
               </div>
 
               <p className="mt-3 text-xs text-[#94A3B8]">
